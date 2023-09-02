@@ -1,7 +1,3 @@
-/* vector.c
- * Copyright 2023 Anon Anonson, Ognjen 'xolatile' Milan Robovic, Emil Williams
- * SPDX Identifier: GPL-3.0-only / NO WARRANTY / NO GUARANTEE */
-
 #include "vector.h"
 
 #include <stdio.h>
@@ -18,7 +14,7 @@ void vector_init(vector_t *        vector,
 	vector->element_size  = element_size;
 	vector->element_count = element_count;
 
-	vector->data = calloc(vector->element_count, vector->element_size);
+	vector->data = (char *)calloc(vector->element_count, vector->element_size);
 
 	assert(vector->data);
 }
@@ -29,8 +25,8 @@ void vector_push(vector_t * vector,
 
 	vector->element_count += 1;
 
-	vector->data = realloc(vector->data,
-	                       vector->element_size * vector->element_count);
+	vector->data = (char *)realloc(vector->data,
+	                               vector->element_size * vector->element_count);
 
 	assert(vector->data);
 

@@ -1,0 +1,3 @@
+regtest
+*.out
+.gdb_history

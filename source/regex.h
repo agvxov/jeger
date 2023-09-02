@@ -21,8 +21,8 @@ typedef struct {
 
 extern regex_t * regex_compile(const char * const pattern);
 extern int       regex_free(regex_t * const regex);
-extern bool      regex_search(regex_t * regex, const char * const string);
-extern match_t * regex_match(regex_t * regex, const char * const string, const bool start_of_string, const int string_offset);
+extern bool      regex_search(const regex_t * const regex, const char * const string);
+extern match_t * regex_match(const regex_t * const regex, const char * const string, const bool start_of_string);
 
 extern bool is_magic(const char c);
 
