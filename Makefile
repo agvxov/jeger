@@ -1,4 +1,4 @@
-CXXFLAGS := -fuse-ld=mold -ggdb
+CXXFLAGS := -fuse-ld=mold -ggdb -Wall -Wextra -Wpedantic
 OUT := regtest
 
 main:

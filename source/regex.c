@@ -20,8 +20,9 @@
 // ------------------
 // ### Char tests ###
 // ------------------
-static bool is_quantifier(const char c) {
-	for (const char * s = "+*?="; *s != '\00'; s++) {
+static inline
+bool mystrchr(const char * const str, const char c){
+	for (const char * s = str; *s != '\00'; s++) {
 		if (*s == c) {
 			return true;
 		}
@@ -29,16 +30,20 @@ static bool is_quantifier(const char c) {
 	return false;
 }
 
+static inline
+bool is_quantifier(const char c) {
+	return mystrchr("=?+*", c);
+}
+
+static inline
+bool is_hologram_escape(const char c) {
+	return mystrchr("<>", c);
+}
+
 bool is_magic(const char c) {
-	if (is_quantifier(c)) {
-		return true;
-	}
-	for (const char * s = "\\[].^"; *s != '\00'; s++) {
-		if (*s == c) {
-			return true;
-		}
-	}
-	return false;
+	return is_quantifier(c)
+	    || mystrchr("\\[].^", c)
+		;
 }
 
 // -----------------
@@ -71,6 +76,12 @@ bool is_magic(const char c) {
 #define JEGER_CHAR_SET_file_extra        "/.-_+,#$%~="
 #define JEGER_CHAR_SET_whitespace        " \t\v\n"
 
+static const char JEGER_CHAR_very_word_chars[] = 
+                                   JEGER_CHAR_SET_underscore
+                                   JEGER_CHAR_SET_lower
+                                   JEGER_CHAR_SET_upper
+                                 ;
+
 // ----------------------
 // ### Internal Types ###
 // ----------------------
@@ -93,24 +104,16 @@ enum {
 	DO_CATCH              = 0x00000001 << 0,
 	IS_NEGATIVE           = 0x00000001 << 1,
 	IS_AT_THE_BEGINNING   = 0x00000001 << 2,
-	DO_SKIP               = 0x00000001 << 3,
-	FORCE_START_OF_STRING = 0x00000001 << 4,
+	FORCE_START_OF_STRING = 0x00000001 << 3,
+	INCREMENT_STATE       = 0x00000001 << 4,
 };
 
 typedef struct {
-	// XXX:
-	int flags;
-// these might be obsolite but im leaving them for now
-	bool      do_loop_hook;
-	bool      do_follow_hook;
-	bool      do_loop_shoot;
-	bool      do_follow_shoot;
-// ---
+	int       flags;
 	int       state;
 	int       width;
 	char    * whitelist;
 	char    * blacklist;
-	regex_t * regex;
 } compiler_state;
 
 
@@ -123,47 +126,50 @@ static const int HALT_AND_CATCH_FIRE = INT_MIN;
 #define ASSERT_HALT(a) ((a == HALT_AND_CATCH_FIRE) ? HALT_AND_CATCH_FIRE : (cs->state + a))
 
 static
-void HOOK_ALL(      int              from,
-              const char * const      str,
-                    int                to,
-                    compiler_state *   cs) {
+void HOOK_ALL(const int                         from,
+              const char           * const       str,
+              const int                           to,
+              const compiler_state * const        cs,
+					regex_t        *           regex) {
 	for (const char * s = str; *s != '\0'; s++) {
 		delta_t * delta = (delta_t *)malloc(sizeof(delta_t));
 		delta->in    = cs->state + from;
 		delta->input = *s;
 		delta->to    = ASSERT_HALT(to);
 		delta->width = cs->width;
-		vector_push(&cs->regex->delta_table,
+		vector_push(&regex->delta_table,
 		            &delta);
 	}
 }
 
 static
-void ABSOLUTE_OFFSHOOT(int             from,
-                       int               to,
-                       int            width,
-                       int      match_width,
-                       compiler_state *  cs) {
+void ABSOLUTE_OFFSHOOT(const int                     from,
+                       const int                       to,
+                       const int                    width,
+                       const int              match_width,
+					         regex_t        *       regex) {
 	offshoot_t * offshoot = (offshoot_t *)malloc(sizeof(offshoot_t));
 	offshoot->in    = from; 
 	offshoot->to    = to;
 	offshoot->width = width;
 	offshoot->match_width = match_width;
-	vector_push(&cs->regex->catch_table,
+	vector_push(&regex->catch_table,
 	            &offshoot);
 }
 
 static
-void OFFSHOOT(int             from,
-              int               to,
-              int            width,
-              int      match_width,
-              compiler_state *  cs) {
-	ABSOLUTE_OFFSHOOT(cs->state + from, ASSERT_HALT(to), width, match_width, cs);
+void OFFSHOOT(const int                     from,
+              const int                       to,
+              const int                    width,
+              const int              match_width,
+              const compiler_state *          cs,
+					regex_t        *       regex) {
+	ABSOLUTE_OFFSHOOT(cs->state + from, ASSERT_HALT(to), width, match_width, regex);
 }
 
 static
-int escape_1_to_1(const char c, compiler_state * cs) {
+int escape_1_to_1(const char                    c,
+                  const compiler_state * const cs) {
 	char * target_list = (cs->flags & IS_NEGATIVE) ? cs->blacklist : cs->whitelist;
 	switch (c) {
 		case 't': {
@@ -211,7 +217,8 @@ int escape_1_to_1(const char c, compiler_state * cs) {
 }
 
 static
-int escape_1_to_N(const char c, compiler_state * cs) {
+int escape_1_to_N(const char                    c,
+                  const compiler_state * const cs) {
 	char * target_list = (cs->flags & IS_NEGATIVE) ? cs->blacklist : cs->whitelist;
 	switch(c) {
 		case 'i': {
@@ -312,12 +319,9 @@ int escape_1_to_N(const char c, compiler_state * cs) {
 			return sizeof(word_chars)-1;
 		};
 		case 'h': {
-			const char very_word_chars[] = JEGER_CHAR_SET_underscore
-			                               JEGER_CHAR_SET_lower
-			                               JEGER_CHAR_SET_upper
-			                             ;
-			strcpy(target_list, very_word_chars);
-			return sizeof(very_word_chars)-1;
+			// #global JEGER_CHAR_very_word_chars
+			strcpy(target_list, JEGER_CHAR_very_word_chars);
+			return sizeof(JEGER_CHAR_very_word_chars)-1;
 		};
 		case 'a': {
 			const char alpha_chars[] = JEGER_CHAR_SET_lower
@@ -341,7 +345,7 @@ int escape_1_to_N(const char c, compiler_state * cs) {
 	return 0;
 }
 
-static
+static inline
 int escape_to_negative(const char                    c,
 	                         compiler_state * const cs) {
 	switch (c) {
@@ -356,59 +360,13 @@ int escape_to_negative(const char                    c,
 	return 0;
 }
 
-static
-int compile_hologram(const char                    c,
-                           compiler_state * const cs) {
-	static
-	const char very_word_chars[] = JEGER_CHAR_SET_underscore
-	                               JEGER_CHAR_SET_lower
-	                               JEGER_CHAR_SET_upper
-	                             ;
-	switch (c) {
-		case '^': {
-			cs->whitelist[0] = '\n';
-			cs->whitelist[1] = '\0';
-			HOOK_ALL(0, cs->whitelist, 0, cs);
-			cs->flags |= DO_SKIP;
-			if (cs->flags & IS_AT_THE_BEGINNING) {
-				cs->flags |= FORCE_START_OF_STRING;
-			} else {
-				cs->state += 1;
-			}
-			return 1;
-		};
-		case '<': {
-			if (cs->flags & IS_AT_THE_BEGINNING) {
-				ABSOLUTE_OFFSHOOT(0, 3, 0, 0, cs); //XXX: figure out how to move this
-			}
-			cs->flags |= DO_SKIP;
-			cs->flags |= IS_NEGATIVE;
-			strcat(cs->blacklist, very_word_chars);
-			OFFSHOOT(0, 0, 1, 0, cs); //XXX: figure out how to move this
-			++cs->state;
-			return sizeof(very_word_chars)-1;
-		};
-		case '>': {
-			cs->flags |= DO_SKIP;
-			cs->flags |= IS_NEGATIVE;
-			strcat(cs->blacklist, very_word_chars);
-			OFFSHOOT(0, 1, 0, 0, cs); //XXX: figure out how to move this
-			++cs->state;	// XXX: the current bug arises from the state being increased before the blacklist is hooked
-			
-			return sizeof(very_word_chars)-1;
-		}
-	}
-	return 0;
-
-}
-
-static
+static inline
 int compile_dot(compiler_state * cs) {
 	cs->flags |= DO_CATCH;
 	return true;
 }
 
-static
+static inline
 int compile_escape(const char                    c,
                          compiler_state * const cs) {
 
@@ -455,6 +413,7 @@ int compile_range(const char           * const range,
 	return ((s - range) + 1);
 }
 
+static
 void filter_blacklist(const char * whitelist,
                       const char * blacklist,
                             char *  filtered) {
@@ -476,120 +435,146 @@ regex_t * regex_compile(const char * const pattern) {
 	vector_init(&regex->delta_table, sizeof(delta_t*), 0UL);
 	vector_init(&regex->catch_table, sizeof(offshoot_t*), 0UL);
 
-	// this is plain retarded
 	char whitelist[64];
 	char blacklist[64];
 
 	compiler_state cs = {
-		.flags               = IS_AT_THE_BEGINNING,
-		.state               = JEGER_INIT_STATE,
-		.width               = 0,
-		.whitelist           = whitelist,
-		.blacklist           = blacklist,
-		.regex               = regex,
+		.flags     = IS_AT_THE_BEGINNING,
+		.state     = JEGER_INIT_STATE,
+		.width     = 0,
+		.whitelist = whitelist,
+		.blacklist = blacklist,
 	};
 
 	for (const char * s = pattern; *s != '\00';) {
-		// Reset the compiler
 		assert(!is_quantifier(*s) && "Pattern starts with quantifier.");
-		whitelist[0]             =  '\0';
-		blacklist[0]             =  '\0';
-		cs.flags                &= IS_AT_THE_BEGINNING;
-		/**/
-		cs.do_loop_hook          = false;
-		cs.do_follow_hook        = false;
-		cs.do_loop_shoot         = false;
-		cs.do_follow_shoot       = false;
-		/**/
-		cs.width        = 1;
+		// Reset the compiler
+		whitelist[0] = '\0';
+		blacklist[0] = '\0';
+		cs.flags    &= IS_AT_THE_BEGINNING;
+		cs.width     = 1;
 
 		// Translate char
 		switch (*s) {
 			case '^': {
-				compile_hologram(*s, &cs);
+				;
 			} break;
 			case '.': {
 				compile_dot(&cs);
+				s += 1;
 			} break;
 			case '\\': {
 				s += 1;
-				assert((compile_escape(*s, &cs) || compile_hologram(*s, &cs)) && "Unknown escape.");
+				if (compile_escape(*s, &cs)) {
+					s += 1;
+				} else if (is_hologram_escape(*s)) {
+					;
+				} else {
+					assert("Unknown escape.");
+				}
 			} break;
 			case '[': {
-				s += compile_range(s, &cs) - 1;
+				s += compile_range(s, &cs);
 			} break;
 			default: { // Literal
 				whitelist[0] =   *s;
 				whitelist[1] = '\0';
+				s += 1;
 			} break;
 		}
-		
-		s += 1;
+
+		// Compile char
+		switch (*s) {
+			// holograms
+			case '^': {
+				whitelist[0] = '\n';
+				whitelist[1] = '\0';
+				HOOK_ALL(0, whitelist, 0, &cs, regex);
+				if (cs.flags & IS_AT_THE_BEGINNING) {
+					cs.flags |= FORCE_START_OF_STRING;
+				} else {
+					cs.flags |= INCREMENT_STATE;
+				}
+				s += 1;
+			} break;
+			case '<': {
+				cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
+				if (cs.flags & IS_AT_THE_BEGINNING) {
+					ABSOLUTE_OFFSHOOT(0, JEGER_INIT_STATE+1, 0, 0, regex);
+				}
+				strcat(blacklist, JEGER_CHAR_very_word_chars);
+				OFFSHOOT(0, 0, 1, 0, &cs, regex);
+				s += 1;
+			} break;
+			case '>': {
+				cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
+				strcat(blacklist, JEGER_CHAR_very_word_chars);
+				OFFSHOOT(0, 1, 0, 0, &cs, regex); 
+				s += 1;
+			} break;
+			// quantifiers
+			case '=':
+			case '?': {
+				HOOK_ALL(0, whitelist, +1, &cs, regex);
+				if ((cs.flags & DO_CATCH)
+				||  (cs.flags & IS_NEGATIVE)) {
+					OFFSHOOT(0, +1, 1, 1, &cs, regex);
+				}
+				s += 1;
+			} break;
+			case '*': {
+				HOOK_ALL(0, whitelist,  0, &cs, regex);
+				if ((cs.flags & DO_CATCH)
+				||  (cs.flags & IS_NEGATIVE)) {
+					OFFSHOOT(0, 0, 1, 1, &cs, regex);
+				}
+				s += 1;
+			} break;
+			case '+': {
+				cs.flags |= INCREMENT_STATE;
+				HOOK_ALL(0, whitelist, +1, &cs, regex);
+				if ((cs.flags & DO_CATCH)
+				||  (cs.flags & IS_NEGATIVE)) {
+					OFFSHOOT(0, +1, 1, 1, &cs, regex);
+				}
+				HOOK_ALL(+1, whitelist, +1, &cs, regex);
+				if ((cs.flags & DO_CATCH)
+				||  (cs.flags & IS_NEGATIVE)) {
+					OFFSHOOT(+1, +1, 1, 1, &cs, regex);
+				}
+				s += 1;
+			} break;
+			default: { // Literal
+				cs.flags |= INCREMENT_STATE;
+				HOOK_ALL(0, whitelist, +1, &cs, regex);
+				if ((cs.flags & DO_CATCH)
+				||  (cs.flags & IS_NEGATIVE)) {
+					OFFSHOOT(0, +1, 1, 1, &cs, regex);
+				}
+			} break;
+		}
 
 		// Compile blacklist
 		if (*blacklist) {
 			char filtered_blacklist[64];
 			filtered_blacklist[0] = '\0'; 
 			filter_blacklist(whitelist, blacklist, filtered_blacklist);
-			HOOK_ALL(0, filtered_blacklist, HALT_AND_CATCH_FIRE, &cs);
+			HOOK_ALL(0, filtered_blacklist, HALT_AND_CATCH_FIRE, &cs, regex);
 		}
 
-		if (cs.flags & DO_SKIP) {
-			goto long_continue;
+		if (cs.flags & INCREMENT_STATE) {
+			++cs.state;
 		}
 
-		// Compile with quantifier
-		switch (*s) {
-			case '=':
-			case '?': {
-				HOOK_ALL(0, whitelist, +1, &cs);
-				if ((cs.flags & DO_CATCH) || (cs.flags & IS_NEGATIVE)) {
-					OFFSHOOT(0, +1, 1, 1, &cs);
-				}
-				s += 1;
-			} break;
-			case '*': {
-				HOOK_ALL(0, whitelist,  0, &cs);
-				if ((cs.flags & DO_CATCH)
-				||  (cs.flags & IS_NEGATIVE)) {
-					OFFSHOOT(0, 0, 1, 1, &cs);
-				}
-				s += 1;
-			} break;
-			case '+': {
-				HOOK_ALL(0, whitelist, +1, &cs);
-				if ((cs.flags & DO_CATCH)
-				||  (cs.flags & IS_NEGATIVE)) {
-					OFFSHOOT(0, +1, 1, 1, &cs);
-				}
-				++cs.state;
-				HOOK_ALL(0, whitelist,  0, &cs);
-				if ((cs.flags & DO_CATCH)
-				||  (cs.flags & IS_NEGATIVE)) {
-					OFFSHOOT(0, 0, 1, 1, &cs);
-				}
-				s += 1;
-			} break;
-			default: { // Literal
-				HOOK_ALL(0, whitelist, +1, &cs);
-				if ((cs.flags & DO_CATCH)
-				||  (cs.flags & IS_NEGATIVE)) {
-					OFFSHOOT(0, +1, 1, 1, &cs);
-				}
-				++cs.state;
-			} break;
-		}
-
-		long_continue:
-		cs.flags &= !IS_AT_THE_BEGINNING;
+		cs.flags &= !(IS_AT_THE_BEGINNING);
 	}
 
 	// Init state hookups
-	ABSOLUTE_OFFSHOOT(0, 2, 0, 0, &cs);
+	ABSOLUTE_OFFSHOOT(0, JEGER_INIT_STATE, 0, 0, regex);
 	if (cs.flags & FORCE_START_OF_STRING) {
-		ABSOLUTE_OFFSHOOT(1, HALT_AND_CATCH_FIRE, 0, 0, &cs);
+		ABSOLUTE_OFFSHOOT(1, HALT_AND_CATCH_FIRE, 0, 0, regex);
 	} else {
-		ABSOLUTE_OFFSHOOT(1, 2, 0, 0, &cs);
+		ABSOLUTE_OFFSHOOT(1,    JEGER_INIT_STATE, 0, 0, regex);
 	}
 
 	regex->accepting_state = cs.state;
@@ -632,9 +617,11 @@ bool regex_assert(const regex_t * const         regex,
 	}
 
 	bool last_stand = false;
+	bool was_found;
 
 	const char * s = string;
 	LOOP: {
+		was_found = false;
 		if (*s == '\0') {
 			last_stand = true;
 			goto PERFORM_CATCH_LOOKUP;
@@ -660,6 +647,7 @@ bool regex_assert(const regex_t * const         regex,
 
 			if ((delta->in == state) 
 			&&  (delta->input == *s)) {
+				was_found = true;
 				const int r = regex_assert(regex, s + delta->width, delta->to, match);
 				if(r){
 					if ((match->position != -1)
@@ -674,12 +662,14 @@ bool regex_assert(const regex_t * const         regex,
 	}
 
 	PERFORM_CATCH_LOOKUP: {
-		const offshoot_t * const my_catch = catch_table_lookup(regex, &state);
-		if (my_catch && (!my_catch->width || !last_stand)) {
-			state = my_catch->to;
-			s += my_catch->width;
-			match->width += my_catch->match_width;
-			goto LOOP;
+		if (!was_found) {
+			const offshoot_t * const my_catch = catch_table_lookup(regex, &state);
+			if (my_catch && (!my_catch->width || !last_stand)) {
+				state = my_catch->to;
+				s += my_catch->width;
+				match->width += my_catch->match_width;
+				goto LOOP;
+			}
 		}
 	}
 

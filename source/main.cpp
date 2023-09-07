@@ -74,6 +74,14 @@ signed main() {
 
 	puts("");
 
+	TEST(R"del(ne.o)del","neto",true);
+	TEST(R"del(ne.+o)del","nettto",true);
+	TEST(R"del(ne.+o)del","neo",false);
+	TEST(R"del(ne.+o)del","neoo",true);
+	TEST(R"del(ne.*o)del","neo",true);
+
+	puts("");
+
 	TEST(R"del(ne.)del","ne\t",true);
 	TEST(R"del(ne\t)del","ne",false);
 	TEST(R"del(ne\t)del","ne\t",true);
@@ -95,6 +103,14 @@ signed main() {
 	TEST(R"del([A-Za-z]+g)del","g",false);
 	TEST(R"del([A-Za-z]*g)del","g",true);
 	TEST(R"del([A-Za-z]+1)del","1",false);
+
+	puts("");
+
+	TEST(R"del([^0-9])del","0",false);
+	TEST(R"del([^A-Za-z])del","HelloWorld",false);
+	TEST(R"del([^A-Za-z]+g)del","313g",true);
+	TEST(R"del([^0-9])del","HelloWorld",true);
+	TEST(R"del([^a])del","ba",true);
 
 	puts("");
 
