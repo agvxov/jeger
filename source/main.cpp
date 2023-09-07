@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "regex.h"
 
 static int test_counter  = 0;
@@ -25,7 +26,20 @@ TEST(const char * const   what,
 	} else {
 		printf("\033[31;1mFailiour\033[0;1m. - \033[0m");
 	}
-	printf("'%12s'\033[1m vs \033[0m'%12s'\033[1m:\033[0m Result = %d, Expected = %d\n", what, on, result, expect);
+	int len;
+	len = strlen(what);
+	char quoted_what[len+3];
+		quoted_what[0] = '\'';
+		memcpy(quoted_what+1, what, len);
+		quoted_what[len+1] = '\'';
+		quoted_what[len+2] = '\0';
+	len = strlen(on);
+	char quoted_on[strlen(on)+3];
+		quoted_on[0] = '\'';
+		memcpy(quoted_on+1, on, len);
+		quoted_on[len+1] = '\'';
+		quoted_on[len+2] = '\0';
+	printf("%12s\033[1m vs \033[0m%12s\033[1m:\033[0m Result = %d, Expected = %d\n", quoted_what, quoted_on, result, expect);
 	if (passed) {
 		++passed_tests;
 	}
