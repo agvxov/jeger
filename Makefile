@@ -2,7 +2,7 @@ CXXFLAGS := -fuse-ld=mold -ggdb -Wall -Wextra -Wpedantic
 OUT := regtest
 
 main:
-	g++ ${CXXFLAGS} source/main.cpp source/vector.c source/regex.c -o ${OUT}
+	${CXX} ${CXXFLAGS} ${CPPFLAGS} source/main.cpp source/vector.c source/jeger.c -o ${OUT}
 
 run:
 	${OUT}
