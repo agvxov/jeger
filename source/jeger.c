@@ -1,4 +1,6 @@
-#pragma GCC diagnostic ignored "-Wc++20-extensions"
+#if __cplusplus
+# pragma GCC diagnostic ignored "-Wc++20-extensions"
+#endif
 
 #include "jeger.h"
 
