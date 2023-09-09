@@ -352,6 +352,43 @@ int escape_to_negative(const char                    c,
 			cs->flags |= IS_NEGATIVE;
 			return sizeof(digit_chars)-1;
 		};
+		case 'X': {
+			const char hex_chars[] = JEGER_CHAR_SET_digits
+			                         JEGER_CHAR_SET_lower_hex
+			                         JEGER_CHAR_SET_upper_hex
+			                       ;
+			strcpy(cs->blacklist, hex_chars);
+			cs->flags |= IS_NEGATIVE;
+			return sizeof(hex_chars)-1;
+		};
+		case 'O': {
+			const char oct_chars[] = JEGER_CHAR_SET_octal_digits;
+			strcpy(cs->blacklist, oct_chars);
+			cs->flags |= IS_NEGATIVE;
+			return sizeof(oct_chars)-1;
+		};
+		case 'W': {
+			const char word_chars[] = JEGER_CHAR_SET_underscore
+			                          JEGER_CHAR_SET_digits
+			                          JEGER_CHAR_SET_lower
+			                          JEGER_CHAR_SET_upper
+			                        ;
+			strcpy(cs->blacklist, word_chars);
+			cs->flags |= IS_NEGATIVE;
+			return sizeof(word_chars)-1;
+		};
+		case 'L': {
+			const char lower_alpha_chars[] = JEGER_CHAR_SET_lower;
+			strcpy(cs->blacklist, lower_alpha_chars);
+			cs->flags |= IS_NEGATIVE;
+			return sizeof(lower_alpha_chars)-1;
+		};
+		case 'U': {
+			const char upper_alpha_chars[] = JEGER_CHAR_SET_upper;
+			strcpy(cs->blacklist, upper_alpha_chars);
+			cs->flags |= IS_NEGATIVE;
+			return sizeof(upper_alpha_chars)-1;
+		};
 	}
 
 	return 0;
