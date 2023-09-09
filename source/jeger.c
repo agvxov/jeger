@@ -454,7 +454,7 @@ void filter_blacklist(const char * whitelist,
                       const char * blacklist,
                             char *  filtered) {
 	for (; *blacklist != '\0'; blacklist++) {
-		for(; *whitelist != '\0'; whitelist++) {
+		for (; *whitelist != '\0'; whitelist++) {
 			if (*blacklist == *whitelist) {
 				goto long_continue;
 			}
