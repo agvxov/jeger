@@ -1,3 +1,7 @@
+#if DEBUG
+# include <assert.h>
+#endif
+
 #include <jeger.h>
 
 static
