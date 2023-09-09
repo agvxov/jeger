@@ -1,5 +1,5 @@
-#ifndef REGEX_H
-#define REGEX_H
+#ifndef JEGER_H
+#define JEGER_H
 
 #include <stdbool.h>
 
