@@ -1,98 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "regex.h"
 
-static int test_counter       = 0;
-static int passed_tests       = 0;
-static int positives          = 0;
-static int positive_successes = 0;
-static int negatives          = 0;
-static int negative_successes = 0;
-
-static int test_counter2  = 0;
-static int passed_tests2  = 0;
-
-static
-void asprint_match_t(      char    * *       destination,
-                     const match_t *   const       match){
-	if (match) {
-		asprintf(destination, "%p {%d, %d}", (void *)match, match->position, match->width);
-	} else {
-		asprintf(destination, "0x0 {N/A, N/A}");
-	}
-}
-
-static
-void print_leader(const bool passed){
-	if (passed) {
-		printf("\033[32;1mSuccess\033[0;1m.  - \033[0m");
-	} else {
-		printf("\033[31;1mFailiour\033[0;1m. - \033[0m");
-	}
-}
-
-static
-void TEST(const char * const   what,
-          const char * const     on,
-	      const bool         expect){
-
-	regex_t * r = regex_compile(what);
-	bool result = regex_search(r, on);
-	bool passed = (result == expect);
-
-	passed && expect ? ++positive_successes : ++negative_successes;
-
-	print_leader(passed);
-
-	char * quoted_what, * quoted_on;
-	asprintf(&quoted_what, "'%s'", what);
-	asprintf(&quoted_on,   "'%s'", on);
-	printf("%14s\033[1m vs \033[0m%14s\033[1m:\033[0m Result = %d, Expected = %d\n", quoted_what, quoted_on, result, expect);
-	free(quoted_what);
-	free(quoted_on);
-	if (passed) {
-		++passed_tests;
-	}
-
-	++test_counter;
-}
-
-static
-void TEST2(const char    * const   what,
-           const char    * const     on,
-	       const match_t         expect){
-
-	regex_t * r      = regex_compile(what);
-	match_t * result = regex_match(r, on, true);
-	bool passed = (
-	                (  result
-	                 && result->position == expect.position
-	                 && result->width    == expect.width
-	                )
-				  ||
-				    expect.position == -1
-	              );
-
-	print_leader(passed);
-
-	char * quoted_what, * quoted_on;
-		asprintf(&quoted_what, "'%s'", what);
-		asprintf(&quoted_on,   "'%s'", on);
-	char * result_string, * expect_string;
-		asprint_match_t(&result_string,  result);
-		asprint_match_t(&expect_string, &expect);
-	printf("%14s\033[1m vs \033[0m%14s\033[1m:\033[0m\n\t%s\n\t%s\n", quoted_what, quoted_on, result_string, expect_string);
-	free(quoted_what);
-	free(quoted_on);
-	free(result_string);
-	free(expect_string);
-	if (passed) {
-		++passed_tests2;
-	}
-
-	++test_counter2;
-}
+#include "test.hpp"
 
 signed main() {
 	TEST( R"del(abc)del",  "abc", true);
@@ -189,20 +99,48 @@ signed main() {
 	TEST(  R"del(test\>)del", "testa", false);
 	TEST(R"del(\<test\>)del",  "test", true);
 
-	if(test_counter == passed_tests) {
+	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
+	} else {
+		fputs("\033[31m", stdout);
 	}
 	printf("\nPassed %d out of %d tests.\033[0m\n", passed_tests, test_counter);
 	printf("\tPositives: %d/%d\n", positive_successes, positives);
 	printf("\tNegatives: %d/%d\n", negative_successes, negatives);
 
 	puts("");
-
 	puts("");
 
-	TEST2( R"del(abc)del",  "abc", match_t{ 0, 3});
-	TEST2(R"del(efg1)del", "efg1", match_t{ 0, 4});
-	TEST2( R"del(nig)del",  "ger", match_t{-1, 0});
-	TEST2(  R"del(ss)del",  "sss", match_t{ 0, 2});
-	TEST2( R"del(sss)del",   "ss", match_t{-1, 0});
+	TEST2( R"del(abc)del",  "abc", match_t{ 0, strlen("abc")});
+	TEST2(R"del(efg1)del", "efg1", match_t{ 0, strlen("efg1")});
+	TEST2( R"del(nig)del",  "ger", match_t{-1, -1});
+	TEST2(  R"del(ss)del",  "sss", match_t{ 0,  2});
+	TEST2( R"del(sss)del",   "ss", match_t{-1, -1});
+
+	puts("");
+	puts("");
+
+	TEST2( R"del(ab+c)del",     "abc", match_t{ 0, strlen("abc")});
+	TEST2(R"del(ef+g1)del", "effffg1", match_t{ 0, strlen("effffg1")});
+	TEST2(R"del(efg1+)del",     "efg", match_t{-1, -1});
+	TEST2(R"del(efg1+)del",    "efg1", match_t{ 0, strlen("efg1")});
+	TEST2(R"del(efg1+)del",   "efg11", match_t{ 0, strlen("efg11")});
+
+	puts("");
+	puts("");
+
+	TEST2( R"del(a+a)del",   " aaa", match_t{ 1, strlen("aaa")});
+	TEST2( R"del(a+a)del",    " aa", match_t{ 1, strlen("aa")});
+	TEST2( R"del(a+a)del",     " a", match_t{-1, -1});
+	TEST2( R"del(a+a)del", "   aaa", match_t{ 3, strlen("aaa")});
+	TEST2(R"del(a+\+)del",   "aaa+", match_t{ 0, strlen("aaa+")});
+
+	if(test_counter2 == passed_tests2) {
+		fputs("\033[32m", stdout);
+	} else {
+		fputs("\033[31m", stdout);
+	}
+	printf("\nPassed %d out of %d tests.\033[0m\n", passed_tests2, test_counter2);
+
+	return 0;
 }
