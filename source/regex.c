@@ -1,12 +1,4 @@
-/* XXX:
- *  as it turns out returning a range of match objects is a
- *  high profile performance issue regarding regex, especially when highlighting.
- *  now as it stands we search an array of tokens for every position on a string.
- *  which sounds ok, until one realizes that searching from any position revails a range,
- *  where (future) matches can or cannot be found. meaning we are computing the same thing
- *  repeatedly, practically resulting in a bruteforcing situation where instead of eliminating
- *  certain non-matches, we blindly hammer character by character.
- */
+#pragma GCC diagnostic ignored "-Wc++20-extensions"
 
 #include "regex.h"
 
@@ -89,14 +81,14 @@ typedef struct {
 	int in;
 	char input;
 	int to;
-	int width;
+	int pattern_width;
 	int match_width;
 } delta_t;
 
 typedef struct {
 	int in;
 	int to;
-	int width;
+	int pattern_width;
 	int match_width;
 } offshoot_t;
 
@@ -133,26 +125,31 @@ void HOOK_ALL(const int                         from,
 					regex_t        *           regex) {
 	for (const char * s = str; *s != '\0'; s++) {
 		delta_t * delta = (delta_t *)malloc(sizeof(delta_t));
-		delta->in    = cs->state + from;
-		delta->input = *s;
-		delta->to    = ASSERT_HALT(to);
-		delta->width = cs->width;
+		*delta = (delta_t){
+			.in            = cs->state + from,
+			.input         = *s,
+			.to            = ASSERT_HALT(to),
+			.pattern_width = cs->width,
+			.match_width   = 1,
+		};
 		vector_push(&regex->delta_table,
 		            &delta);
 	}
 }
 
 static
-void ABSOLUTE_OFFSHOOT(const int                     from,
-                       const int                       to,
-                       const int                    width,
-                       const int              match_width,
-					         regex_t        *       regex) {
+void ABSOLUTE_OFFSHOOT(const int              from,
+                       const int                to,
+                       const int             width,
+                       const int       match_width,
+					         regex_t *       regex) {
 	offshoot_t * offshoot = (offshoot_t *)malloc(sizeof(offshoot_t));
-	offshoot->in    = from; 
-	offshoot->to    = to;
-	offshoot->width = width;
-	offshoot->match_width = match_width;
+	*offshoot = (offshoot_t){
+		.in            = from,
+		.to            = to,
+		.pattern_width = width,
+		.match_width   = match_width,
+	};
 	vector_push(&regex->catch_table,
 	            &offshoot);
 }
@@ -361,7 +358,7 @@ int escape_to_negative(const char                    c,
 }
 
 static inline
-int compile_dot(compiler_state * cs) {
+int compile_dot(compiler_state * const cs) {
 	cs->flags |= DO_CATCH;
 	return true;
 }
@@ -371,9 +368,9 @@ int compile_escape(const char                    c,
                          compiler_state * const cs) {
 
 	return escape_1_to_1(c,      cs)
-		|| escape_1_to_N(c,      cs)
-		|| escape_to_negative(c, cs)
-		;
+	    || escape_1_to_N(c,      cs)
+	    || escape_to_negative(c, cs)
+	    ;
 }
 
 static
@@ -441,7 +438,6 @@ regex_t * regex_compile(const char * const pattern) {
 	compiler_state cs = {
 		.flags     = IS_AT_THE_BEGINNING,
 		.state     = JEGER_INIT_STATE,
-		.width     = 0,
 		.whitelist = whitelist,
 		.blacklist = blacklist,
 	};
@@ -451,7 +447,7 @@ regex_t * regex_compile(const char * const pattern) {
 		// Reset the compiler
 		whitelist[0] = '\0';
 		blacklist[0] = '\0';
-		cs.flags    &= IS_AT_THE_BEGINNING;
+		cs.flags    &= (IS_AT_THE_BEGINNING | FORCE_START_OF_STRING);
 		cs.width     = 1;
 
 		// Translate char
@@ -566,7 +562,7 @@ regex_t * regex_compile(const char * const pattern) {
 			++cs.state;
 		}
 
-		cs.flags &= !(IS_AT_THE_BEGINNING);
+		cs.flags &= (~IS_AT_THE_BEGINNING);
 	}
 
 	// Init state hookups
@@ -648,10 +644,9 @@ bool regex_assert(const regex_t * const         regex,
 			if ((delta->in == state) 
 			&&  (delta->input == *s)) {
 				was_found = true;
-				const int r = regex_assert(regex, s + delta->width, delta->to, match);
+				const int r = regex_assert(regex, s + delta->pattern_width, delta->to, match);
 				if(r){
-					if ((match->position != -1)
-					&&  (delta->match_width)) {
+					if (match->position == -1) {
 						match->position = (s - string);
 					}
 					match->width += delta->match_width;
@@ -664,9 +659,9 @@ bool regex_assert(const regex_t * const         regex,
 	PERFORM_CATCH_LOOKUP: {
 		if (!was_found) {
 			const offshoot_t * const my_catch = catch_table_lookup(regex, &state);
-			if (my_catch && (!my_catch->width || !last_stand)) {
+			if (my_catch && (!my_catch->pattern_width || !last_stand)) {
 				state = my_catch->to;
-				s += my_catch->width;
+				s += my_catch->pattern_width;
 				match->width += my_catch->match_width;
 				goto LOOP;
 			}
@@ -679,30 +674,68 @@ bool regex_assert(const regex_t * const         regex,
 match_t * regex_match(const regex_t * const              regex,
                       const char    * const             string,
                       const bool            is_start_of_string) {
-	if (regex == NULL) {
-		return NULL;
-	}
+
+	vector_t matches;
+	vector_init(&matches, sizeof(match_t), 0);
 
 	match_t * match = (match_t *)malloc(sizeof(match_t));
 
-	if (string == NULL) {
-		match->position = -1;
-		match->width    =  0;
-		return match;
+	/* Non-existent regex does not match anything.
+	 * Not to be confused with an empty regex.
+	 */
+	if (regex == NULL) {
+		goto FINISH;
 	}
 
-	const int initial_state = (int)(!is_start_of_string);
+	// Find all matches
+	{
+		const char * s = string;
+		do {
+			int initial_state;
+			initial_state = (int)(!(is_start_of_string && (s == string)));
 
-	// XXX: this should be called in a loop, always restarting from the last char of the last match
-	if (regex_assert(regex, string, initial_state, match)) {
-		return match;
-	} else {
-		return NULL;
+			*match = (match_t){
+				.position = -1,
+				.width    =  0,
+			};
+
+			if (regex_assert(regex, s, initial_state, match)) {
+				match->position = (s - string);
+
+				vector_push(&matches, match);
+
+				s += ((match->width > 0) ? match->width : 1);
+				match = (match_t *)malloc(sizeof(match_t));
+			} else {
+				++s;
+			}
+		} while (*s != '\0');
 	}
+
+	FINISH:
+
+	// Insert sentinel
+	*match = (match_t){
+		.position = -1,
+		.width    = -1,
+	};
+	vector_push(&matches, match);
+
+	// Hide internal vector usage
+	const size_t data_size = matches.element_size * matches.element_count;
+	match_t * r = (match_t *)malloc(data_size);
+	memcpy(r, matches.data, data_size);
+	vector_free(&matches);
+
+	return r;
 }
 
 bool regex_search(const regex_t * const  regex,
                   const char    * const string) {
 
-	return (bool)regex_match(regex, string, true);
+	match_t * m = regex_match(regex, string, true);
+	const bool r = (m->position != -1);
+	free(m);
+
+	return r;
 }
