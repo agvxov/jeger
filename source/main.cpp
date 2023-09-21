@@ -99,6 +99,10 @@ signed main() {
 	TEST(  R"del(test\>)del", "testa", false);
 	TEST(R"del(\<test\>)del",  "test", true);
 
+	puts("");
+
+	TEST(R"del(\<int\>)del",  "printf", false);
+
 	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
 	} else {
