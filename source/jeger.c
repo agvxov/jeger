@@ -1,4 +1,4 @@
-#if __cplusplus
+#ifdef __cplusplus
 # pragma GCC diagnostic ignored "-Wc++20-extensions"
 #endif
 
