@@ -102,6 +102,8 @@ signed main() {
 	puts("");
 
 	TEST(R"del(\<int\>)del",  "printf", false);
+	TEST(R"del(\<print\>)del", " print ", true);
+	TEST(R"del(\<print\>)del", "\nprint\n", true);
 
 	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
