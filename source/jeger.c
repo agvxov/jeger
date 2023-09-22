@@ -557,10 +557,11 @@ regex_t * regex_compile(const char * const pattern) {
 				s += 1;
 			} break;
 			case '>': {
-				HOOK_ALL(0, whitelist, 0, &cs, regex);
+				HOOK_ALL(0, whitelist, +1, &cs, regex);
 				cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
 				strcat(blacklist, JEGER_CHAR_symbol_chars);
 				OFFSHOOT(+1, +2, 0, 0, &cs, regex); 
+				++cs.state;
 				s += 1;
 			} break;
 			// quantifiers
