@@ -68,13 +68,13 @@ bool is_magic(const char c) {
                                          "\331\332\333\334\335" \
                                          "\336\337"
 #define JEGER_CHAR_SET_file_extra        "/.-_+,#$%~="
-#define JEGER_CHAR_SET_whitespace        " \t\v\n"
+#define JEGER_CHAR_SET_whitespace        " " "\t\v\n"
 
-static const char JEGER_CHAR_very_word_chars[] = 
-                                   JEGER_CHAR_SET_underscore
-                                   JEGER_CHAR_SET_lower
-                                   JEGER_CHAR_SET_upper
-                                 ;
+static const char JEGER_CHAR_symbol_chars[] = 
+                                             JEGER_CHAR_SET_underscore
+                                             JEGER_CHAR_SET_lower
+                                             JEGER_CHAR_SET_upper
+                                         ;
 
 // ----------------------
 // ### Internal Types ###
@@ -318,9 +318,9 @@ int escape_1_to_N(const char                    c,
 			return sizeof(word_chars)-1;
 		};
 		case 'h': {
-			// #global JEGER_CHAR_very_word_chars
-			strcpy(target_list, JEGER_CHAR_very_word_chars);
-			return sizeof(JEGER_CHAR_very_word_chars)-1;
+			// #global JEGER_CHAR_symbol_chars
+			strcpy(target_list, JEGER_CHAR_symbol_chars);
+			return sizeof(JEGER_CHAR_symbol_chars)-1;
 		};
 		case 'a': {
 			const char alpha_chars[] = JEGER_CHAR_SET_lower
@@ -503,7 +503,7 @@ regex_t * regex_compile(const char * const pattern) {
 				if (compile_escape(*s, &cs)) {
 					s += 1;
 				} else if (is_hologram_escape(*s)) {
-					;
+					s -= 1;
 				} else {
 					assert("Unknown escape.");
 				}
@@ -516,6 +516,12 @@ regex_t * regex_compile(const char * const pattern) {
 				whitelist[1] = '\0';
 				s += 1;
 			} break;
+		}
+
+		/* Ew */
+		if (*s == '\\'
+		&&  is_hologram_escape(*(s+1))) {
+			++s;
 		}
 
 		// Compile char
@@ -533,18 +539,28 @@ regex_t * regex_compile(const char * const pattern) {
 				s += 1;
 			} break;
 			case '<': {
-				cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
-				if (cs.flags & IS_AT_THE_BEGINNING) {
-					ABSOLUTE_OFFSHOOT(0, JEGER_INIT_STATE+1, 0, 0, regex);
+				unsigned true_inc = 1;
+				if ((cs.flags & DO_CATCH)
+				||  (cs.flags & IS_NEGATIVE)) {
+					OFFSHOOT(0,  +1, 1, 1, &cs, regex);
+					OFFSHOOT(+1, +2, 1, 1, &cs, regex);
+					++true_inc;
+				} else {
+					cs.flags |= INCREMENT_STATE;
 				}
-				strcat(blacklist, JEGER_CHAR_very_word_chars);
-				OFFSHOOT(0, 0, 1, 0, &cs, regex);
+				cs.flags |= IS_NEGATIVE;
+				if (cs.flags & IS_AT_THE_BEGINNING) {
+					ABSOLUTE_OFFSHOOT(0, JEGER_INIT_STATE + true_inc, 0, 0, regex);
+				}
+				strcat(blacklist, JEGER_CHAR_symbol_chars);
+				//OFFSHOOT(0 + (true_inc-1), +true_inc, 1, 0, &cs, regex);
 				s += 1;
 			} break;
 			case '>': {
+				HOOK_ALL(0, whitelist, 0, &cs, regex);
 				cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
-				strcat(blacklist, JEGER_CHAR_very_word_chars);
-				OFFSHOOT(0, 1, 0, 0, &cs, regex); 
+				strcat(blacklist, JEGER_CHAR_symbol_chars);
+				OFFSHOOT(+1, +2, 0, 0, &cs, regex); 
 				s += 1;
 			} break;
 			// quantifiers
@@ -729,8 +745,8 @@ match_t * regex_match(const regex_t * const              regex,
 	// Find all matches
 	{
 		const char * s = string;
+		int initial_state;
 		do {
-			int initial_state;
 			initial_state = (int)(!(is_start_of_string && (s == string)));
 
 			*match = (match_t){
