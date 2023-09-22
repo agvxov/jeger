@@ -95,15 +95,17 @@ signed main() {
 
 	TEST(  R"del(\<test)del",  "test", true);
 	TEST(  R"del(test\>)del",  "test", true);
-	TEST(  R"del(\<test)del", "atest", false);
+	TEST(  R"del(\<test)del", "ttest", false);
 	TEST(  R"del(test\>)del", "testa", false);
 	TEST(R"del(\<test\>)del",  "test", true);
 
 	puts("");
 
-	TEST(R"del(\<int\>)del",  "printf", false);
-	TEST(R"del(\<print\>)del", " print ", true);
-	TEST(R"del(\<print\>)del", "\nprint\n", true);
+	TEST(    R"del(\<int\>)del",  "printf", false);
+	TEST(R"del(.\<print\>.)del", " print ",  true);
+	TEST(R"del(.\<print\>.)del",  "fprint", false);
+	TEST(R"del(.\<print\>.)del",  "printf", false);
+	TEST(R"del(.\<print\>.)del", "fprintf", false);
 
 	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
