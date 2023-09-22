@@ -12,7 +12,7 @@ static int passed_tests2  = 0;
 
 static
 void asprint_match_t(      char    * *       destination,
-                     const match_t *   const       match){
+                     const match_t *   const       match) {
 	if (match) {
 		asprintf(destination, "%p {%d, %d}", (void *)match, match->position, match->width);
 	} else {
@@ -21,11 +21,11 @@ void asprint_match_t(      char    * *       destination,
 }
 
 static
-void print_leader(const bool passed){
+void print_leader(const bool passed, const int n) {
 	if (passed) {
-		printf("\033[32;1mSuccess\033[0;1m.  - \033[0m");
+		printf("\033[32;1mSuccess\033[0m.  %02d\033[1m - \033[0m", n);
 	} else {
-		printf("\033[31;1mFailiour\033[0;1m. - \033[0m");
+		printf("\033[31;1mFailiour\033[0m. %02d\033[1m - \033[0m", n);
 	}
 }
 
@@ -39,9 +39,10 @@ void do_flush(void) {
 static
 void TEST(const char * const   what,
           const char * const     on,
-	      const bool         expect){
+	      const bool         expect) {
 
 	do_flush();
+	++test_counter;
 
 	regex_t * r = regex_compile(what);
 	bool result = regex_search(r, on);
@@ -51,7 +52,7 @@ void TEST(const char * const   what,
 
 	expect ? ++positives : ++negatives;
 
-	print_leader(passed);
+	print_leader(passed, test_counter);
 
 	char * quoted_what, * quoted_on;
 	asprintf(&quoted_what, "'%s'", what);
@@ -63,8 +64,6 @@ void TEST(const char * const   what,
 		++passed_tests;
 		expect ? ++positive_successes : ++negative_successes;
 	}
-
-	++test_counter;
 }
 
 static
@@ -73,6 +72,7 @@ void TEST2(const char    * const   what,
 	       const match_t         expect){
 
 	do_flush();
+	++test_counter2;
 
 	regex_t * r      = regex_compile(what);
 	match_t * result = regex_match(r, on, true);
@@ -80,7 +80,7 @@ void TEST2(const char    * const   what,
 	               && result->width == expect.width
 	              );
 
-	print_leader(passed);
+	print_leader(passed, test_counter2);
 
 	char * quoted_what, * quoted_on;
 		asprintf(&quoted_what, "'%s'", what);
@@ -98,6 +98,4 @@ void TEST2(const char    * const   what,
 	if (passed) {
 		++passed_tests2;
 	}
-
-	++test_counter2;
 }
