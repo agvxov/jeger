@@ -48,7 +48,6 @@ bool is_magic(const char c) {
 // -------------------
 // ### Match tests ###
 // -------------------
-static inline
 bool is_sentinel(const match_t * const match) {
 	return (match->position == -1)
 	    && (match->width    == -1)

@@ -28,5 +28,6 @@ extern bool      regex_search(const regex_t * const regex, const char * const st
 extern match_t * regex_match(const regex_t * const regex, const char * const string, const bool start_of_string);
 
 extern bool is_magic(const char c);
+extern bool is_sentinel(const match_t * const match);
 
 #endif
