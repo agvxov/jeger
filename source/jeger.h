@@ -15,7 +15,10 @@ typedef struct {
 } regex_t;
 
 typedef struct {
-	int position;
+	union {
+		int    position;
+		const char * _pos_ptr;
+	};
 	int width;
 } match_t;
 

@@ -734,11 +734,18 @@ bool regex_assert(const regex_t * const         regex,
 
 			if ((delta->in == state) 
 			&&  (delta->input == *s)) {
+				bool do_reset = false;
 				was_found = true;
+				if (!match->_pos_ptr && delta->match_width) {
+					match->_pos_ptr = s;
+					do_reset = true;
+				}
 				const int r = regex_assert(regex, s + delta->pattern_width, delta->to, match);
 				if(r){
 					match->width += delta->match_width;
 					return r;
+				} else if (do_reset) {
+					match->_pos_ptr = NULL;
 				}
 			}
 		}
@@ -750,9 +757,6 @@ bool regex_assert(const regex_t * const         regex,
 			if (my_catch && (!my_catch->pattern_width || !last_stand)) {
 				state = my_catch->to;
 				s += my_catch->pattern_width;
-				if (match->position < 1) {
-					match->position = my_catch->match_width;
-				}
 				match->width += my_catch->match_width;
 				goto LOOP;
 			}
@@ -786,15 +790,15 @@ match_t * regex_match(const regex_t * const              regex,
 			initial_state = (int)(!(is_start_of_string && (s == string)));
 
 			*match = (match_t){
-				.position = -1,
-				.width    =  0,
+				._pos_ptr = NULL,
+				.width    =    0,
 			};
 
 			if (regex_assert(regex, s, initial_state, match)) {
-				if(match->position == -1){
-				match->position = (s - string);
-				}else{
-				match->position += (s - string);
+				if (match->_pos_ptr) {
+					match->position = (match->_pos_ptr - string);
+				} else {
+					match->position = (s - string);
 				}
 
 				vector_push(&matches, match);
