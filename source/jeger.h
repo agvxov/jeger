@@ -16,7 +16,7 @@ typedef struct {
 
 typedef struct {
 	union {
-		int    position;
+		int          position;
 		const char * _pos_ptr;
 	};
 	int width;

@@ -67,13 +67,13 @@ bool is_sentinel(const match_t * const match) {
 #define JEGER_CHAR_SET_lower_hex         "abcdef"
 #define JEGER_CHAR_SET_upper_hex         "ABCDEF"
 #define JEGER_CHAR_SET_oct_241_to_277                           \
-			                             "\241\242\243\244\245" \
-			                             "\246\247\250\251\252" \
-			                             "\253\254\255\256\257" \
-			                             "\260\261\262\263\264" \
-			                             "\265\266\267\270\271" \
-			                             "\272\273\274\275\276" \
-			                             "\277"
+                                         "\241\242\243\244\245" \
+                                         "\246\247\250\251\252" \
+                                         "\253\254\255\256\257" \
+                                         "\260\261\262\263\264" \
+                                         "\265\266\267\270\271" \
+                                         "\272\273\274\275\276" \
+                                         "\277"
 #define JEGER_CHAR_SET_oct_300_to_337                           \
                                          "\300\301\302\303\304" \
                                          "\305\306\307\310\311" \
@@ -122,6 +122,7 @@ typedef struct {
 	int       flags;
 	int       state;
 	int       width;
+	int       width2;
 	char    * whitelist;
 	char    * blacklist;
 } compiler_state;
@@ -148,7 +149,7 @@ void HOOK_ALL(const int                         from,
 			.input         = *s,
 			.to            = ASSERT_HALT(to),
 			.pattern_width = cs->width,
-			.match_width   = 1,
+			.match_width   = cs->width2,
 		};
 		vector_push(&regex->delta_table,
 		            &delta);
@@ -504,6 +505,7 @@ regex_t * regex_compile(const char * const pattern) {
 		blacklist[0] = '\0';
 		cs.flags    &= (IS_AT_THE_BEGINNING | FORCE_START_OF_STRING);
 		cs.width     = 1;
+		cs.width2    = 1;
 
 		// Translate char
 		switch (*s) {
@@ -571,6 +573,7 @@ regex_t * regex_compile(const char * const pattern) {
 					// ---
 					++cs.state;
 					cs.width = 0;
+					cs.width2 = 0;
 					HOOK_ALL(0, whitelist, +1, &cs, regex);
 					cs.width = 1;
 					OFFSHOOT(0, +1, 1, 0, &cs, regex);
