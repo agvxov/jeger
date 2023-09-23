@@ -151,6 +151,15 @@ signed main() {
 	TEST2( R"del(a+a)del", "   aaa", match_t{ 3, strlen("aaa")});
 	TEST2(R"del(a+\+)del",   "aaa+", match_t{ 0, strlen("aaa+")});
 
+	puts("");
+	puts("");
+
+	TEST2(R"del(\<while\>)del",      "while", match_t{0, strlen("while")});
+	TEST2(R"del(\<while\>)del",     " while", match_t{1, strlen("while")});
+	TEST2(R"del(\<while\>)del",  "for while", match_t{4, strlen("while")});
+	TEST2(R"del(\<while\>)del",  "for9while", match_t{4, strlen("while")});
+	TEST2(R"del(\<while\>)del", "for9while ", match_t{4, strlen("while")});
+
 	if(test_counter2 == passed_tests2) {
 		fputs("\033[32m", stdout);
 	} else {

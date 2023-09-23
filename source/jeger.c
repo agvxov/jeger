@@ -8,6 +8,9 @@
 #include <string.h>
 #include <limits.h>
 #include <stdlib.h>
+#if DEBUG
+# include <stdio.h>
+#endif
 
 #define JEGER_SOS_STATE   0
 #define JEGER_NSOS_STATE  1
@@ -40,6 +43,16 @@ bool is_magic(const char c) {
 	return is_quantifier(c)
 	    || mystrchr("\\[].^", c)
 		;
+}
+
+// -------------------
+// ### Match tests ###
+// -------------------
+static inline
+bool is_sentinel(const match_t * const match) {
+	return (match->position == -1)
+	    && (match->width    == -1)
+	    ;
 }
 
 // -----------------
@@ -97,11 +110,12 @@ typedef struct {
 } offshoot_t;
 
 enum {
-	DO_CATCH              = 0x00000001 << 0,
-	IS_NEGATIVE           = 0x00000001 << 1,
-	IS_AT_THE_BEGINNING   = 0x00000001 << 2,
-	FORCE_START_OF_STRING = 0x00000001 << 3,
-	INCREMENT_STATE       = 0x00000001 << 4,
+	DO_CATCH                  = 0x00000001 << 0,
+	IS_NEGATIVE               = 0x00000001 << 1,
+	IS_AT_THE_BEGINNING       = 0x00000001 << 2,
+	FORCE_START_OF_STRING     = 0x00000001 << 3,
+	DO_FORBID_START_OF_STRING = 0x00000001 << 4,
+	INCREMENT_STATE           = 0x00000001 << 5,
 };
 
 typedef struct {
@@ -483,8 +497,6 @@ regex_t * regex_compile(const char * const pattern) {
 		.blacklist = blacklist,
 	};
 
-	bool fucku = true;
-
 	for (const char * s = pattern; *s != '\00';) {
 		assert(!is_quantifier(*s) && "Pattern starts with quantifier.");
 		// Reset the compiler
@@ -543,13 +555,14 @@ regex_t * regex_compile(const char * const pattern) {
 				s += 1;
 			} break;
 			case '<': {
+				// XXX: make this legible
 				if (cs.flags & IS_AT_THE_BEGINNING
 				&& !(cs.flags & DO_CATCH)
 				&& !(cs.flags & IS_NEGATIVE)
 				&& whitelist[0] == '\0') {
 					// ---
 					cs.flags |= INCREMENT_STATE;
-					fucku = false;
+					cs.flags |= DO_FORBID_START_OF_STRING;
 					strcat(whitelist, JEGER_CHAR_symbol_chars);
 					// ---
 					ABSOLUTE_OFFSHOOT( JEGER_SOS_STATE, JEGER_INIT_STATE+1, 0, 0, regex);
@@ -642,7 +655,7 @@ regex_t * regex_compile(const char * const pattern) {
 	}
 
 	// Init state hookups
-	if (fucku) {
+	if (!(cs.flags & DO_FORBID_START_OF_STRING)) {
 		ABSOLUTE_OFFSHOOT(JEGER_SOS_STATE, JEGER_INIT_STATE, 0, 0, regex);
 	}
 	if (cs.flags & FORCE_START_OF_STRING) {
@@ -724,9 +737,6 @@ bool regex_assert(const regex_t * const         regex,
 				was_found = true;
 				const int r = regex_assert(regex, s + delta->pattern_width, delta->to, match);
 				if(r){
-					if (match->position == -1) {
-						match->position = (s - string);
-					}
 					match->width += delta->match_width;
 					return r;
 				}
@@ -740,6 +750,9 @@ bool regex_assert(const regex_t * const         regex,
 			if (my_catch && (!my_catch->pattern_width || !last_stand)) {
 				state = my_catch->to;
 				s += my_catch->pattern_width;
+				if (match->position < 1) {
+					match->position = my_catch->match_width;
+				}
 				match->width += my_catch->match_width;
 				goto LOOP;
 			}
@@ -778,7 +791,11 @@ match_t * regex_match(const regex_t * const              regex,
 			};
 
 			if (regex_assert(regex, s, initial_state, match)) {
+				if(match->position == -1){
 				match->position = (s - string);
+				}else{
+				match->position += (s - string);
+				}
 
 				vector_push(&matches, match);
 
@@ -812,7 +829,7 @@ bool regex_search(const regex_t * const  regex,
                   const char    * const string) {
 
 	match_t * m = regex_match(regex, string, true);
-	const bool r = (m->position != -1);
+	const bool r = !is_sentinel(m);
 	free(m);
 
 	return r;
