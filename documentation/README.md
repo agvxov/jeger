@@ -98,5 +98,13 @@ SOW must match:
 Not only that, this combination is key,
 either it has to be the start of the string
 or there has to be at least something which is not a symbol char.
-With out the last condition "eexample" would match "\\\<exaplme\\\>"
+With out the last condition "eexample" would match "\\\<exaple\\\>"
 as the iteration of `regex_match()` reaches "example".
+
+From a more practical perspective:
+``` C
+\<myword\>
+// Must match
+"myword"
+" myword"
+```

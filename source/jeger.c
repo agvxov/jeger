@@ -9,7 +9,9 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#define JEGER_INIT_STATE    2
+#define JEGER_SOS_STATE   0
+#define JEGER_NSOS_STATE  1
+#define JEGER_INIT_STATE  2
 
 // ------------------
 // ### Char tests ###
@@ -346,7 +348,7 @@ int escape_1_to_N(const char                    c,
 
 static inline
 int escape_to_negative(const char                    c,
-	                         compiler_state * const cs) {
+                             compiler_state * const cs) {
 	switch (c) {
 		case 'D': {
 			const char digit_chars[] = JEGER_CHAR_SET_digits;
@@ -481,6 +483,8 @@ regex_t * regex_compile(const char * const pattern) {
 		.blacklist = blacklist,
 	};
 
+	bool fucku = true;
+
 	for (const char * s = pattern; *s != '\00';) {
 		assert(!is_quantifier(*s) && "Pattern starts with quantifier.");
 		// Reset the compiler
@@ -539,21 +543,37 @@ regex_t * regex_compile(const char * const pattern) {
 				s += 1;
 			} break;
 			case '<': {
-				unsigned true_inc = 1;
-				if ((cs.flags & DO_CATCH)
-				||  (cs.flags & IS_NEGATIVE)) {
-					OFFSHOOT(0,  +1, 1, 1, &cs, regex);
-					OFFSHOOT(+1, +2, 1, 1, &cs, regex);
-					++true_inc;
-				} else {
+				if (cs.flags & IS_AT_THE_BEGINNING
+				&& !(cs.flags & DO_CATCH)
+				&& !(cs.flags & IS_NEGATIVE)
+				&& whitelist[0] == '\0') {
+					// ---
 					cs.flags |= INCREMENT_STATE;
+					fucku = false;
+					strcat(whitelist, JEGER_CHAR_symbol_chars);
+					// ---
+					ABSOLUTE_OFFSHOOT( JEGER_SOS_STATE, JEGER_INIT_STATE+1, 0, 0, regex);
+					ABSOLUTE_OFFSHOOT(JEGER_INIT_STATE, JEGER_INIT_STATE+2, 1, 0, regex);
+					HOOK_ALL(0, whitelist, HALT_AND_CATCH_FIRE, &cs, regex);
+					// ---
+					++cs.state;
+					cs.width = 0;
+					HOOK_ALL(0, whitelist, +1, &cs, regex);
+					cs.width = 1;
+					OFFSHOOT(0, +1, 1, 0, &cs, regex);
+					// ---
+				} else {
+					HOOK_ALL(0, whitelist, +1, &cs, regex);
+					if ((cs.flags & DO_CATCH)
+					||  (cs.flags & IS_NEGATIVE)) {
+						OFFSHOOT(+1, +2, 1, 1, &cs, regex);
+					} else {
+						cs.flags |= INCREMENT_STATE;
+					}
+					OFFSHOOT(0, +1, 1, 0, &cs, regex);
 				}
 				cs.flags |= IS_NEGATIVE;
-				if (cs.flags & IS_AT_THE_BEGINNING) {
-					ABSOLUTE_OFFSHOOT(0, JEGER_INIT_STATE + true_inc, 0, 0, regex);
-				}
 				strcat(blacklist, JEGER_CHAR_symbol_chars);
-				//OFFSHOOT(0 + (true_inc-1), +true_inc, 1, 0, &cs, regex);
 				s += 1;
 			} break;
 			case '>': {
@@ -622,11 +642,13 @@ regex_t * regex_compile(const char * const pattern) {
 	}
 
 	// Init state hookups
-	ABSOLUTE_OFFSHOOT(0, JEGER_INIT_STATE, 0, 0, regex);
+	if (fucku) {
+		ABSOLUTE_OFFSHOOT(JEGER_SOS_STATE, JEGER_INIT_STATE, 0, 0, regex);
+	}
 	if (cs.flags & FORCE_START_OF_STRING) {
-		ABSOLUTE_OFFSHOOT(1, HALT_AND_CATCH_FIRE, 0, 0, regex);
+		ABSOLUTE_OFFSHOOT(JEGER_NSOS_STATE, HALT_AND_CATCH_FIRE, 0, 0, regex);
 	} else {
-		ABSOLUTE_OFFSHOOT(1,    JEGER_INIT_STATE, 0, 0, regex);
+		ABSOLUTE_OFFSHOOT(JEGER_NSOS_STATE,    JEGER_INIT_STATE, 0, 0, regex);
 	}
 
 	regex->accepting_state = cs.state;

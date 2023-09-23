@@ -107,6 +107,14 @@ signed main() {
 	TEST(R"del(.\<print\>.)del",  "printf", false);
 	TEST(R"del(.\<print\>.)del", "fprintf", false);
 
+	puts("");
+
+	TEST(R"del(\<while\>)del",       "while", true);
+	TEST(R"del(\<while\>)del",     " while ", true);
+	TEST(R"del(\<while\>)del",     "9while ", true);
+	TEST(R"del(\<while\>)del", "for while {", true);
+	TEST(R"del(\<while\>)del",  "for while{", true);
+
 	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
 	} else {
