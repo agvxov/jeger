@@ -121,7 +121,7 @@ typedef struct {
 	int       flags;
 	int       state;
 	int       width;
-	int       width2;
+	int       match_width;
 	char    * whitelist;
 	char    * blacklist;
 } compiler_state;
@@ -148,7 +148,7 @@ void HOOK_ALL(const int                         from,
 			.input         = *s,
 			.to            = ASSERT_HALT(to),
 			.pattern_width = cs->width,
-			.match_width   = cs->width2,
+			.match_width   = cs->match_width,
 		};
 		vector_push(&regex->delta_table,
 		            &delta);
@@ -504,7 +504,7 @@ regex_t * regex_compile(const char * const pattern) {
 		blacklist[0] = '\0';
 		cs.flags    &= (IS_AT_THE_BEGINNING | FORCE_START_OF_STRING);
 		cs.width     = 1;
-		cs.width2    = 1;
+		cs.match_width    = 1;
 
 		// Translate char
 		switch (*s) {
@@ -572,7 +572,7 @@ regex_t * regex_compile(const char * const pattern) {
 					// ---
 					++cs.state;
 					cs.width = 0;
-					cs.width2 = 0;
+					cs.match_width = 0;
 					HOOK_ALL(0, whitelist, +1, &cs, regex);
 					cs.width = 1;
 					OFFSHOOT(0, +1, 1, 0, &cs, regex);
