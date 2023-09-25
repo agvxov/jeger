@@ -115,6 +115,15 @@ signed main() {
 	TEST(R"del(\<while\>)del", "for while {", true);
 	TEST(R"del(\<while\>)del",  "for while{", true);
 
+	puts("");
+
+	TEST(R"del(/\*[\d\D]*\*/)del",         "908", false);
+	TEST(R"del(/\*[\d\D]*\*/)del",     "/*908*/",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del",     "/*asd*/",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del",   "/* 908 */",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del",   "/* asd */",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del", "/* as\nd */",  true);
+
 	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
 	} else {
