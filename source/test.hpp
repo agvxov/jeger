@@ -23,7 +23,7 @@ void asprint_match_t(      char    * *       destination,
 static
 void print_leader(const bool passed, const int n) {
 	if (passed) {
-		printf("\033[32;1mSuccess\033[0m.  %02d\033[1m - \033[0m", n);
+		printf("\033[32;1mSuccess\033[0m. %02d\033[1m - \033[0m", n);
 	} else {
 		printf("\033[31;1mFailure\033[0m. %02d\033[1m - \033[0m", n);
 	}

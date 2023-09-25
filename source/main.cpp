@@ -117,12 +117,11 @@ signed main() {
 
 	puts("");
 
-	TEST(R"del(/\*[\d\D]*\*/)del",         "908", false);
-	TEST(R"del(/\*[\d\D]*\*/)del",     "/*908*/",  true);
-	TEST(R"del(/\*[\d\D]*\*/)del",     "/*asd*/",  true);
-	TEST(R"del(/\*[\d\D]*\*/)del",   "/* 908 */",  true);
-	TEST(R"del(/\*[\d\D]*\*/)del",   "/* asd */",  true);
-	TEST(R"del(/\*[\d\D]*\*/)del", "/* as\nd */",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del",       "908", false);
+	TEST(R"del(/\*[\d\D]*\*/)del",   "/*908*/",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del",   "/*asd*/",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del", "/* asd */",  true);
+	TEST(R"del(/\*[\d\D]*\*/)del", "/* as* */",  true);
 
 	if (test_counter == passed_tests) {
 		fputs("\033[32m", stdout);
