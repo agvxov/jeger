@@ -535,12 +535,6 @@ regex_t * regex_compile(const char * const pattern) {
 			} break;
 		}
 
-		/* Ew */
-		if (*s == '\\'
-		&&  is_hologram_escape(*(s+1))) {
-			++s;
-		}
-
 		// Compile char
 		switch (*s) {
 			// holograms
@@ -555,49 +549,58 @@ regex_t * regex_compile(const char * const pattern) {
 				}
 				s += 1;
 			} break;
-			case '<': {
-				// XXX: make this legible
-				if (cs.flags & IS_AT_THE_BEGINNING
-				&& !(cs.flags & DO_CATCH)
-				&& !(cs.flags & IS_NEGATIVE)
-				&& whitelist[0] == '\0') {
-					// ---
-					cs.flags |= INCREMENT_STATE;
-					cs.flags |= DO_FORBID_START_OF_STRING;
-					strcat(whitelist, JEGER_CHAR_symbol_chars);
-					// ---
-					ABSOLUTE_OFFSHOOT( JEGER_SOS_STATE, JEGER_INIT_STATE+1, 0, 0, regex);
-					ABSOLUTE_OFFSHOOT(JEGER_INIT_STATE, JEGER_INIT_STATE+2, 1, 0, regex);
-					HOOK_ALL(0, whitelist, HALT_AND_CATCH_FIRE, &cs, regex);
-					// ---
-					++cs.state;
-					cs.width = 0;
-					cs.match_width = 0;
-					HOOK_ALL(0, whitelist, +1, &cs, regex);
-					cs.width = 1;
-					OFFSHOOT(0, +1, 1, 0, &cs, regex);
-					// ---
+			case '\\': {
+				if(is_hologram_escape(*(s+1))) {
+					++s;
 				} else {
-					HOOK_ALL(0, whitelist, +1, &cs, regex);
-					if ((cs.flags & DO_CATCH)
-					||  (cs.flags & IS_NEGATIVE)) {
-						OFFSHOOT(+1, +2, 1, 1, &cs, regex);
-					} else {
-						cs.flags |= INCREMENT_STATE;
-					}
-					OFFSHOOT(0, +1, 1, 0, &cs, regex);
+					goto DEFAULT;
 				}
-				cs.flags |= IS_NEGATIVE;
-				strcat(blacklist, JEGER_CHAR_symbol_chars);
-				s += 1;
-			} break;
-			case '>': {
-				HOOK_ALL(0, whitelist, +1, &cs, regex);
-				cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
-				strcat(blacklist, JEGER_CHAR_symbol_chars);
-				OFFSHOOT(+1, +2, 0, 0, &cs, regex); 
-				++cs.state;
-				s += 1;
+				switch(*s){
+					case '<': {
+						// XXX: make this legible
+						if (cs.flags & IS_AT_THE_BEGINNING
+						&& !(cs.flags & DO_CATCH)
+						&& !(cs.flags & IS_NEGATIVE)
+						&& whitelist[0] == '\0') {
+							// ---
+							cs.flags |= INCREMENT_STATE;
+							cs.flags |= DO_FORBID_START_OF_STRING;
+							strcat(whitelist, JEGER_CHAR_symbol_chars);
+							// ---
+							ABSOLUTE_OFFSHOOT( JEGER_SOS_STATE, JEGER_INIT_STATE+1, 0, 0, regex);
+							ABSOLUTE_OFFSHOOT(JEGER_INIT_STATE, JEGER_INIT_STATE+2, 1, 0, regex);
+							HOOK_ALL(0, whitelist, HALT_AND_CATCH_FIRE, &cs, regex);
+							// ---
+							++cs.state;
+							cs.width = 0;
+							cs.match_width = 0;
+							HOOK_ALL(0, whitelist, +1, &cs, regex);
+							cs.width = 1;
+							OFFSHOOT(0, +1, 1, 0, &cs, regex);
+							// ---
+						} else {
+							HOOK_ALL(0, whitelist, +1, &cs, regex);
+							if ((cs.flags & DO_CATCH)
+							||  (cs.flags & IS_NEGATIVE)) {
+								OFFSHOOT(+1, +2, 1, 1, &cs, regex);
+							} else {
+								cs.flags |= INCREMENT_STATE;
+							}
+							OFFSHOOT(0, +1, 1, 0, &cs, regex);
+						}
+						cs.flags |= IS_NEGATIVE;
+						strcat(blacklist, JEGER_CHAR_symbol_chars);
+						s += 1;
+					} break;
+					case '>': {
+						HOOK_ALL(0, whitelist, +1, &cs, regex);
+						cs.flags |= IS_NEGATIVE | INCREMENT_STATE;
+						strcat(blacklist, JEGER_CHAR_symbol_chars);
+						OFFSHOOT(+1, +2, 0, 0, &cs, regex); 
+						++cs.state;
+						s += 1;
+					} break;
+				}
 			} break;
 			// quantifiers
 			case '=':
@@ -631,6 +634,7 @@ regex_t * regex_compile(const char * const pattern) {
 				}
 				s += 1;
 			} break;
+			DEFAULT:
 			default: { // Literal
 				cs.flags |= INCREMENT_STATE;
 				HOOK_ALL(0, whitelist, +1, &cs, regex);
