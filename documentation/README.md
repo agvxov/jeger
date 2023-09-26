@@ -43,7 +43,7 @@ EOS ? --> look up fallback table
 | Line |   SOS | EOS |
 | Word |   SOW | EOW |
 
----
+
 ##### HALT\_AND\_CATCH\_FIRE
 H&C is a special state signalling that we have hit a dead end.
 The reason why need it and we cant just instanly quick is backtracking.
@@ -54,8 +54,8 @@ This is a negative range.
 ```
 let myNegativeRange = {'e', 'x', 'a', 'm', 'p', 'l'}
 ```
-None of the characters in $myNegativeRange must be accepted.
-The way this is a compiled is that we first hook all chars in $myNegativeRange to H&C,
+None of the characters in `$myNegativeRange` must be accepted.
+The way this is a compiled is that we first hook all chars in `$myNegativeRange` to H&C,
 then define an OFFSHOOT of width 1.
 Put differently:
 if we read something illegal we abort this branch,
@@ -79,7 +79,7 @@ It simply ignores the state transition table and rather unconditionally hooks it
 
 #### ^
 This is the carrot operator.
-It matches the SOS (start of the string).
+It matches the SOS.
 
 For explanation purposes multilining (match '\n') is irrelevant.
 That behaves just like a literal.
@@ -111,7 +111,7 @@ SOW must match:
 [^\h]myword
 ```
 Not only that, this combination is key,
-either it has to be the start of the string
+either it has to be the SOS
 or there has to be at least something which is not a symbol char.
 With out the last condition "eexample" would match "\\\<exaple\\\>"
 as the iteration of `regex_match()` reaches "example".
