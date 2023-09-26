@@ -41,7 +41,7 @@ EOS ? --> look up fallback table
 |      | Start | End |
 | :--: | :---: | :-: |
 | Line |   SOS | EOS |
-| Word |   WOS | EOW |
+| Word |   SOW | EOW |
 
 ---
 ##### HALT\_AND\_CATCH\_FIRE
