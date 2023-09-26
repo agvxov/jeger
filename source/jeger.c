@@ -490,6 +490,11 @@ regex_t * regex_compile(const char * const pattern) {
 	char whitelist[64];
 	char blacklist[64];
 
+	static const int REGEX_PREVERSABLE_FLAGS = IS_AT_THE_BEGINNING
+	                                         | FORCE_START_OF_STRING
+	                                         | DO_FORBID_START_OF_STRING
+	                                         ;
+
 	compiler_state cs = {
 		.flags     = IS_AT_THE_BEGINNING,
 		.state     = JEGER_INIT_STATE,
@@ -500,11 +505,11 @@ regex_t * regex_compile(const char * const pattern) {
 	for (const char * s = pattern; *s != '\00';) {
 		assert(!is_quantifier(*s) && "Pattern starts with quantifier.");
 		// Reset the compiler
-		whitelist[0] = '\0';
-		blacklist[0] = '\0';
-		cs.flags    &= (IS_AT_THE_BEGINNING | FORCE_START_OF_STRING);
-		cs.width     = 1;
-		cs.match_width    = 1;
+		whitelist[0]   = '\0';
+		blacklist[0]   = '\0';
+		cs.flags      &= REGEX_PREVERSABLE_FLAGS;
+		cs.width       = 1;
+		cs.match_width = 1;
 
 		// Translate char
 		switch (*s) {
@@ -657,6 +662,7 @@ regex_t * regex_compile(const char * const pattern) {
 			++cs.state;
 		}
 
+		// Purge SOS flag
 		cs.flags &= (~IS_AT_THE_BEGINNING);
 	}
 
