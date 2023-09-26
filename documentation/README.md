@@ -29,6 +29,23 @@ State transition table look up
 		+ fail    --> return 
 	+ fail    --> return
 ---
+# Legend
+
+|      | Start | End |
+| :--: | :---: | :-: |
+| Line |   SOS | EOS |
+| Word |   WOS | EOW |
+
+#### SOS
+Start Of String
+
+#### EOS
+Start Of String
+
+#### WOS
+Start Of String
+
+---
 ##### HALT\_AND\_CATCH\_FIRE
 H&C is a special state signalling that we have hit a dead end.
 The reason why need it and we cant just instanly quick is backtracking.
@@ -89,7 +106,7 @@ and finally returns failiour.
 
 
 #### \<
-This is the SOW (start of word) operator.
+This is the SOW operator.
 SOW must match:
 ```
 ^myword
