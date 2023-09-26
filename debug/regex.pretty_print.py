@@ -7,15 +7,16 @@ class RegexPrinter:
 		#   Regular shit
 		s += "accepting_state = " + str(self.val['accepting_state']) + ", str = " + str(self.val['str']) + ",\n"
 		#   Delta
-		delta_t_ptr_ptr = gdb.lookup_type("delta_t").pointer().pointer()
+		delta_t_ptr_ptr_t = gdb.lookup_type("delta_t").pointer().pointer()
 		dt = self.val['delta_table']
 		s += "delta_table = {\n"
+		d0 = 0
 		for i in range(0, dt['element_count']):
 			s += "\t"
 			s += (
 					str(
 						(
-							dt['data'].cast(delta_t_ptr_ptr)
+							dt['data'].cast(delta_t_ptr_ptr_t)
 								+
 							i
 						).dereference().dereference()
