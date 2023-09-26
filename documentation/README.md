@@ -18,6 +18,7 @@
 	+---------------------------------+
 
 ---
+
 State transition table look up
     + success --> continue
     + fail    --> look up fallback table
@@ -28,6 +29,7 @@ State transition table look up
 		+ success --> continue
 		+ fail    --> return 
 	+ fail    --> return
+
 ---
 # Legend
 
@@ -35,15 +37,6 @@ State transition table look up
 | :--: | :---: | :-: |
 | Line |   SOS | EOS |
 | Word |   WOS | EOW |
-
-#### SOS
-Start Of String
-
-#### EOS
-Start Of String
-
-#### WOS
-Start Of String
 
 ---
 ##### HALT\_AND\_CATCH\_FIRE
