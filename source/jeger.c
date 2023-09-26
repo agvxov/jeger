@@ -131,7 +131,11 @@ typedef struct {
 // ----------------------------------
 // ### Regex creation/destruction ###
 // ----------------------------------
-static const int HALT_AND_CATCH_FIRE = INT_MIN;
+enum {
+	ASSERTION_FAILURE   =       0,
+	ASSERTION_SUCCESS   =       1,
+	HALT_AND_CATCH_FIRE = INT_MIN,
+};
 
 #define ASSERT_HALT(a) ((a == HALT_AND_CATCH_FIRE) ? HALT_AND_CATCH_FIRE : (cs->state + a))
 
@@ -707,12 +711,12 @@ const offshoot_t * catch_table_lookup(const regex_t * const regex,
 }
 
 static
-bool regex_assert(const regex_t * const         regex,
+int regex_assert(const regex_t * const         regex,
                   const char    * const        string,
                         int                     state,
                         match_t * const         match) {
 	if (state == HALT_AND_CATCH_FIRE) {
-		return false;
+		return HALT_AND_CATCH_FIRE;
 	}
 
 	bool last_stand = false;
@@ -753,11 +757,16 @@ bool regex_assert(const regex_t * const         regex,
 					do_reset = true;
 				}
 				const int r = regex_assert(regex, s + delta->pattern_width, delta->to, match);
-				if(r){
+				if(r == ASSERTION_SUCCESS){
 					match->width += delta->match_width;
 					return r;
-				} else if (do_reset) {
-					match->_pos_ptr = NULL;
+				} else {
+					if (r == ASSERTION_FAILURE) {
+						was_found = false;
+					}
+					if (do_reset) {
+						match->_pos_ptr = NULL;
+					}
 				}
 			}
 		}
@@ -775,7 +784,7 @@ bool regex_assert(const regex_t * const         regex,
 		}
 	}
 
-	return (state == regex->accepting_state);
+	return ((state == regex->accepting_state) ? ASSERTION_SUCCESS : ASSERTION_FAILURE);
 }
 
 match_t * regex_match(const regex_t * const              regex,
@@ -806,7 +815,8 @@ match_t * regex_match(const regex_t * const              regex,
 				.width    =    0,
 			};
 
-			if (regex_assert(regex, s, initial_state, match)) {
+			if (regex_assert(regex, s, initial_state, match) == 1) {
+				//printf("true:  %s\n", s);
 				if (match->_pos_ptr) {
 					match->position = (match->_pos_ptr - string);
 				} else {
@@ -818,6 +828,7 @@ match_t * regex_match(const regex_t * const              regex,
 				s += ((match->width > 0) ? match->width : 1);
 				match = (match_t *)malloc(sizeof(match_t));
 			} else {
+				//printf("false: %s\n", s);
 				++s;
 			}
 		} while (*s != '\0');
