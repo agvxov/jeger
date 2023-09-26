@@ -101,6 +101,14 @@ signed main() {
 
 	puts("");
 
+	TEST(  R"del(\<test)del", " test ",  true);
+	TEST(  R"del(test\>)del", " test ",  true);
+	TEST(  R"del(\<test)del", " ttest ", false);
+	TEST(  R"del(test\>)del", "testa ", false);
+	TEST(R"del(\<test\>)del", " test ",  true);
+
+	puts("");
+
 	TEST(    R"del(\<int\>)del",  "printf", false);
 	TEST(R"del(.\<print\>.)del", " print ",  true);
 	TEST(R"del(.\<print\>.)del",  "fprint", false);
