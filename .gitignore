@@ -3,3 +3,4 @@ regtest
 *.so
 *.data
 .gdb_history
+gdb.txt
