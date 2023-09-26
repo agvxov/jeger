@@ -12,3 +12,6 @@ run:
 	${OUT}
 
 test: run
+
+clean:
+	rm ${OUT}
