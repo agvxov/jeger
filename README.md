@@ -9,20 +9,26 @@ match_t * regex_match(const regex_t * const regex, const char * const string, co
 ```
 Returns a sentinel terminated array of `match_t` objects.
 The sentinel object is defined as `(match_t){ .position = -1, .width = -1, };`.
-The position and width of non-sentinel `match_t`s is guaranteed to be => 0.
+
+```C
+bool is_sentinel(const match_t * const match);
+```
+This is the function you must check whether a `match_t` is a sentinel or not.
+I.e. make this the break condition while looping the results.
+
 
 | Symbol | Meaning (TODO: fill in) |
 | :----: | :---------------------: |
 | .      | |
-| =      | |
-| +      | |
-| *      | |
-| ?      | |
-| \\<    | |
-| \\>    | |
-| ^      | |
-| \t     | |
-| \n     | |
+| ?      | One or zero of the previous token |
+| =      | Same as ? |
+| *      | Any number of the previous token |
+| +      | One or more of the previous token |
+| \\<    | Start of word |
+| \\>    | End of word |
+| ^      | Start of string |
+| \t     | Tab |
+| \n     | New line |
 | \b     | |
 | \i     | |
 | \I     | |
@@ -33,19 +39,19 @@ The position and width of non-sentinel `match_t`s is guaranteed to be => 0.
 | \p     | |
 | \P     | |
 | \s     | |
-| \d     | |
-| \D     | |
-| \x     | |
-| \X     | |
-| \o     | |
-| \O     | |
-| \w     | |
-| \W     | |
+| \d     | Digit char |
+| \D     | Not digit char |
+| \x     | Hex char|
+| \X     | Not hex char |
+| \o     | Octal char |
+| \O     | Not octal char |
+| \w     | Word char|
+| \W     | Not word char|
 | \h     | |
-| \a     | |
-| \l     | |
-| \L     | |
-| \u     | |
-| \U     | |
-| [\<range\>]   | |
-| [\^\<range\>] | |
+| \a     | Ascii letter |
+| \l     | Lowercase ascii letter |
+| \L     | Not (lowercase ascii letter) |
+| \u     | Uppercase ascii letter |
+| \U     | Not (uppercase ascii letter) |
+| [\<range\>]   | Any of \<range\> |
+| [\^\<range\>] | None of \<range\> |
