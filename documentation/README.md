@@ -20,15 +20,15 @@
 ---
 
 State transition table look up
-    + success --> continue
-    + fail    --> look up fallback table
-		+ success --> continue
-		+ fail    --> return
+ + success --> continue
+ + fail    --> look up fallback table
+  - success --> continue
+  - fail    --> return
 ? EOS --> look up fallback table
-	+ success --> is 0 width?
-		+ success --> continue
-		+ fail    --> return 
-	+ fail    --> return
+ + success --> is 0 width?
+  - success --> continue
+  - fail    --> return 
+ + fail    --> return
 
 ---
 # Legend
