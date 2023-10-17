@@ -494,7 +494,7 @@ regex_t * regex_compile(const char * const pattern) {
 	char whitelist[64];
 	char blacklist[64];
 
-	static const int REGEX_PREVERSABLE_FLAGS = IS_AT_THE_BEGINNING
+	static const int REGEX_PRESERVABLE_FLAGS = IS_AT_THE_BEGINNING
 	                                         | FORCE_START_OF_STRING
 	                                         | DO_FORBID_START_OF_STRING
 	                                         ;
@@ -511,7 +511,7 @@ regex_t * regex_compile(const char * const pattern) {
 		// Reset the compiler
 		whitelist[0]   = '\0';
 		blacklist[0]   = '\0';
-		cs.flags      &= REGEX_PREVERSABLE_FLAGS;
+		cs.flags      &= REGEX_PRESERVABLE_FLAGS;
 		cs.width       = 1;
 		cs.match_width = 1;
 
