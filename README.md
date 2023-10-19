@@ -24,7 +24,6 @@ I.e. make this the break condition while looping the results.
 | =      | Same as ? |
 | *      | Any number of the previous token |
 | +      | One or more of the previous token |
-| \\<    | Start of word |
 | \\>    | End of word |
 | ^      | Start of string |
 | \t     | Tab |
