@@ -85,6 +85,14 @@ signed main() {
 
 	puts("");
 
+	TEST( R"del([^0-9]*[^a-z])del", "a0",  true);
+	TEST( R"del([^0-9]*[^a-z])del", "0a", false);
+	TEST( R"del([^0-9]?[^a-z])del",  "a", false);
+	TEST( R"del([^0-9]?[^a-z])del",  "0", false);
+	TEST(R"del([^0-9]+[^a-z]*)del", "aa",  true);
+
+	puts("");
+
 	TEST( R"del(^\^)del",  "^^",  true);
 	TEST( R"del(^\^)del",  " ^", false);
 	TEST(R"del(^ \^)del",  " ^",  true);
