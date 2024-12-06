@@ -1,24 +1,6 @@
 // @BAKE gcc -o $*.out $@ -ggdb
 #include <stdio.h>
 
-/*
-#define ALPHABET_SIZE 4
-#define N_STATES      3
-#define AS_SYMBOL(c) (c-'a')
-
-enum {
-    NO_MATCH = 100,
-    AAB_MATCH,
-    AAC_MATCH,
-};
-
-char table[N_STATES][ALPHABET_SIZE] = {
-    [0] = {1, NO_MATCH, NO_MATCH, NO_MATCH},
-    [1] = {2, NO_MATCH, NO_MATCH, NO_MATCH},
-    [2] = {NO_MATCH, AAB_MATCH, AAC_MATCH, NO_MATCH},
-};
-*/
-
 int had_seperation = 1;
 
 #include "generated.h"
