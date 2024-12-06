@@ -1,4 +1,7 @@
+#include <stdio.h>
+
 #include "parse.h"
+#include "jeger.h"
 
 void usage(void) {
     puts("jeger <file>");

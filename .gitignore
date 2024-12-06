@@ -1,6 +1,7 @@
 regtest
 *.out
 *.so
+*.o
 *.data
 *.yy.*
 .gdb_history

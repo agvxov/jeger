@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "util.h"
 #include "jeger.h"
 
 //#define AS_SYMBOL(c) (c-'a')

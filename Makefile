@@ -1,17 +1,21 @@
 .PHONY: test
 
-#main:
-#	bake main_generator.c
-#	# im such a fucking genius
-#	./main_generator.out 2>&1 | perl -pe "s/(\[.{1,4}\] = 128)/\x1b[90m\1\x1b[0m/g"
-#
-#
-#test:
-#	./main_generator.out > generated.h 2> /dev/null
-#	bake main.c
-#	./main.out
+SOURCE.d := source/
+OBJECT.d := object/
 
-main:
-	flex --debug -o scanner_scanner.yy.c source/scanner_scanner.l
-	g++ -D SCANNER_MAIN -o scanner_scanner.out scanner_scanner.c
-	./scanner_scanner.out source/scanner_scanner.l
+CFLAGS   += -Wall -Wpedantic -I${SOURCE.d}/
+CPPFLAGS += ${CFLAGS}
+
+OUTPUT := jeger
+
+main: object/main.o object/generator.o object/jeger.yy.o
+	${LINK.cxx}
+
+object/%.yy.cpp: source/%.l
+	flex -o $@ $<
+
+object/%.o: source/%.c
+	${COMPILE.c} $< -o $@
+
+object/%.o: source/%.cpp
+	${COMPILE.cxx} $< -o $@

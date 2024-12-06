@@ -240,7 +240,7 @@ prefix={value}      {
 
 int parse(const char * filename) {
     int r = 0;
-    FILE * f = fopen(argv[1], "r");
+    FILE * f = fopen(filename, "r");
     if (!f) { return 2; }
 
     yyin = f;
