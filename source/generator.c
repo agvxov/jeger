@@ -8,11 +8,6 @@
 #define AS_SYMBOL(c) c
 #define TOKEN_OFFSET 128 /* XXX */
 
-typedef struct {
-    int state;
-    const char * pattern;
-} pattern_t;
-
 static inline
 void put_header(FILE * f, const int alphabet_size, const int n_states, const int no_match) {
     fputs(
@@ -94,7 +89,7 @@ int get_max_number_of_states(const pattern_t * patterns) {
     return r;
 }
 
-void generate(const pattern_t * patterns) {
+void generate(const char * filename) {
     // Init
     int n_states = get_max_number_of_states(patterns);
 
@@ -180,11 +175,4 @@ void generate(const pattern_t * patterns) {
     put_header(stdout, alphabet_size, n_states, TOKEN_OFFSET);
     put_table(stdout, (int*)table, prefixes, n_states, alphabet_size);
     put_state_table(states, n_states);
-}
-
-signed main(void) {
-
-    generate(patterns);
-
-    return 0;
 }

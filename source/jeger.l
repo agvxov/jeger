@@ -5,13 +5,13 @@
         maybe it should be reimplemented in pure C when possible.
      */
     #include "jeger.h"
-    #include <map>
-    #include <vector>
-    #include <string>
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
     #include <stdarg.h>
+    #include <map>
+    #include <vector>
+    #include <string>
 
     using namespace std;
 
@@ -239,12 +239,18 @@ prefix={value}      {
 %%
 
 int parse(const char * filename) {
+    int r = 0;
     FILE * f = fopen(argv[1], "r");
     if (!f) { return 2; }
 
     yyin = f;
 
-    return yylex();
+    r = yylex();
+    if (r) { return r; }
+
+    /* XXX fill globals */
+
+    return r;
 }
 
 #ifdef SCANNER_MAIN
