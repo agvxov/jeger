@@ -12,6 +12,6 @@
 #	./main.out
 
 main:
-	flex --debug -o scanner_scanner.c source/scanner_scanner.l
+	flex --debug -o scanner_scanner.yy.c source/scanner_scanner.l
 	g++ -D SCANNER_MAIN -o scanner_scanner.out scanner_scanner.c
 	./scanner_scanner.out source/scanner_scanner.l

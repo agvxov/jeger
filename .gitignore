@@ -2,5 +2,6 @@ regtest
 *.out
 *.so
 *.data
+*.yy.*
 .gdb_history
 gdb.txt
