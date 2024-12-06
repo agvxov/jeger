@@ -1,12 +1,12 @@
-// @BAKE gcc -o $*.out $@ -ggdb
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "jeger.h"
+
 //#define AS_SYMBOL(c) (c-'a')
 #define AS_SYMBOL(c) c
-#define ALPHABET_SIZE 128
-#define TOKEN_OFFSET ALPHABET_SIZE
+#define TOKEN_OFFSET 128 /* XXX */
 
 typedef struct {
     int state;
@@ -43,17 +43,17 @@ void put_table(FILE * f, const int * table, char * * prefixes, int n_states, int
     fputs("int table[N_STATES][ALPHABET_SIZE] = {\n", f);
     for (int i = 0; i < n_states; i++) {
         fprintf(f, "\t[%d] = {", i);
-        for (int h = 0; h < ALPHABET_SIZE; h++) {
+        for (int h = 0; h < alphabet_size; h++) {
             if (h == '\\') {
-                fprintf(f, "['\\\\'] = %d, ", table[i*ALPHABET_SIZE + h]);
+                fprintf(f, "['\\\\'] = %d, ", table[i*alphabet_size + h]);
             } else
             if (h == '\'') {
-                fprintf(f, "['\\''] = %d, ", table[i*ALPHABET_SIZE + h]);
+                fprintf(f, "['\\''] = %d, ", table[i*alphabet_size + h]);
             } else
             if (isprint(h)) {
-                fprintf(f, "['%c'] = %d, ", h, table[i*ALPHABET_SIZE + h]);
+                fprintf(f, "['%c'] = %d, ", h, table[i*alphabet_size + h]);
             } else {
-                fprintf(f, "[%d] = %d, ", h, table[i*ALPHABET_SIZE + h]);
+                fprintf(f, "[%d] = %d, ", h, table[i*alphabet_size + h]);
             }
         }
         fprintf(f, "}, /* \"%s\" */\n", prefixes[i]); // XXX can break
@@ -105,8 +105,8 @@ void generate(const pattern_t * patterns) {
     char * prefixes[n_states];
     INITIALIZE_ARRAY(prefixes, n_states, NULL);
 
-    int table[n_states][ALPHABET_SIZE];
-    INITIALIZE_MATRIX(table, n_states, ALPHABET_SIZE, TOKEN_OFFSET);
+    int table[n_states][alphabet_size];
+    INITIALIZE_MATRIX(table, n_states, alphabet_size, TOKEN_OFFSET);
 
     // Construct table
     int next_free_slot = 1;
@@ -167,7 +167,7 @@ void generate(const pattern_t * patterns) {
           = TOKEN_OFFSET+1 + pattern_index
         ;
 
-        put_table(stderr, (int*)table, prefixes, n_states, ALPHABET_SIZE);
+        put_table(stderr, (int*)table, prefixes, n_states, alphabet_size);
         fputs("/* ================== */\n", stderr);
     }
 
@@ -177,90 +177,91 @@ void generate(const pattern_t * patterns) {
     n_states = next_free_slot;
 
     // Output
-    put_header(stdout, ALPHABET_SIZE, n_states, TOKEN_OFFSET);
-    put_table(stdout, (int*)table, prefixes, n_states, ALPHABET_SIZE);
+    put_header(stdout, alphabet_size, n_states, TOKEN_OFFSET);
+    put_table(stdout, (int*)table, prefixes, n_states, alphabet_size);
     put_state_table(states, n_states);
 }
 
 signed main(void) {
-    /*
-    pattern_t patterns[] = {
-        {0, "while"},
-        {0, "printf"},
-        {0, "\""},
-        {1, "."},
-        {1, "\""},
-        {0, NULL}
-    };
-    */
-    pattern_t patterns[] = {
-        {0, "auto"},
-        {0, "break"},
-        {0, "case"},
-        {0, "char"},
-        {0, "const"},
-        {0, "continue"},
-        {0, "default"},
-        {0, "do"},
-        {0, "double"},
-        {0, "else"},
-        {0, "enum"},
-        {0, "extern"},
-        {0, "float"},
-        {0, "for"},
-        {0, "goto"},
-        {0, "if"},
-        {0, "inline"},
-        {0, "int"},
-        {0, "long"},
-        {0, "register"},
-        {0, "return"},
-        {0, "restrict"},
-        {0, "short"},
-        {0, "signed"},
-        {0, "sizeof"},
-        {0, "static"},
-        {0, "struct"},
-        {0, "switch"},
-        {0, "typedef"},
-        {0, "union"},
-        {0, "unsigned"},
-        {0, "void"},
-        {0, "volatile"},
-        {0, "while"},
-        {0, " "},
-        {0, "\n"},
-        {0, "("},
-        {0, ")"},
-        {0, "{"},
-        {0, "}"},
-        {0, "["},
-        {0, "]"},
-        {0, ","},
-        {0, ";"},
-        {0, "\""},
-        {0, "/*"},
-        {0, "//"},
-        {1, "\\\""},
-        {1, "\""},
-        {2, "*/"},
-        {3, "\n"},
-        {0, NULL}
-    };
-    //pattern_t patterns[] = {
-    //    {0, "short"},
-    //    {0, "signed"},
-    //    {0, "sizeof"},
-    //    {0, "static"},
-    //    {0, "struct"},
-    //    {0, "switch"},
-    //    {0, NULL}
-    //};
 
     generate(patterns);
 
     return 0;
 }
+
+//pattern_t patterns[] = {
+//    {0, "while"},
+//    {0, "printf"},
+//    {0, "\""},
+//    {1, "."},
+//    {1, "\""},
+//    {0, NULL}
+//};
+
+//pattern_t patterns[] = {
+//    {0, "auto"},
+//    {0, "break"},
+//    {0, "case"},
+//    {0, "char"},
+//    {0, "const"},
+//    {0, "continue"},
+//    {0, "default"},
+//    {0, "do"},
+//    {0, "double"},
+//    {0, "else"},
+//    {0, "enum"},
+//    {0, "extern"},
+//    {0, "float"},
+//    {0, "for"},
+//    {0, "goto"},
+//    {0, "if"},
+//    {0, "inline"},
+//    {0, "int"},
+//    {0, "long"},
+//    {0, "register"},
+//    {0, "return"},
+//    {0, "restrict"},
+//    {0, "short"},
+//    {0, "signed"},
+//    {0, "sizeof"},
+//    {0, "static"},
+//    {0, "struct"},
+//    {0, "switch"},
+//    {0, "typedef"},
+//    {0, "union"},
+//    {0, "unsigned"},
+//    {0, "void"},
+//    {0, "volatile"},
+//    {0, "while"},
+//    {0, " "},
+//    {0, "\n"},
+//    {0, "("},
+//    {0, ")"},
+//    {0, "{"},
+//    {0, "}"},
+//    {0, "["},
+//    {0, "]"},
+//    {0, ","},
+//    {0, ";"},
+//    {0, "\""},
+//    {0, "/*"},
+//    {0, "//"},
+//    {1, "\\\""},
+//    {1, "\""},
+//    {2, "*/"},
+//    {3, "\n"},
+//    {0, NULL}
+//};
+
+//pattern_t patterns[] = {
+//    {0, "short"},
+//    {0, "signed"},
+//    {0, "sizeof"},
+//    {0, "static"},
+//    {0, "struct"},
+//    {0, "switch"},
+//    {0, NULL}
+//};
 
 /*
             if (pattern->pattern[i] == '.') {

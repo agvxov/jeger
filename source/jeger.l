@@ -1,4 +1,10 @@
 %{
+    /* NOTE:
+        its technically very bad taste to implement
+        a minimalist lex subset with flex.
+        maybe it should be reimplemented in pure C when possible.
+     */
+    #include "jeger.h"
     #include <map>
     #include <vector>
     #include <string>
@@ -231,6 +237,15 @@ prefix={value}      {
 }
 
 %%
+
+int parse(const char * filename) {
+    FILE * f = fopen(argv[1], "r");
+    if (!f) { return 2; }
+
+    yyin = f;
+
+    return yylex();
+}
 
 #ifdef SCANNER_MAIN
 
