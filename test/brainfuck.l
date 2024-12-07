@@ -25,6 +25,7 @@
      }
 \]   {
         if (!*data_ptr) {
+            REVERSE;
             BEGIN IN_SKIP_BACKWARD;
         }
      }
@@ -35,7 +36,7 @@
 }
 
 <IN_SKIP_BACKWARD>{
-\[     { BEGIN INITIAL; }
+\[     { REVERSE; BEGIN INITIAL; }
 }
 
 <IN_SKIP_FORWARD,IN_SKIP_BACKWARD>{
@@ -44,7 +45,6 @@
 %%
 
 signed main(int argc, char * argv[]) {
-    // XXX: modify this to use a string
     if (argc != 2) {
         printf("%s <file>", argv[0]);
         return 1;

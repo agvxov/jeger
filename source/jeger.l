@@ -40,8 +40,8 @@
         char * code;
     } rule_t2;
 
-    string definition_section_code_buffer;
-    string code_section_code_buffer;
+    string definition_section_code_buffer_str;
+    string code_section_code_buffer_str;
 
     map<string, vector<rule_t2>> rules;
     map<string, vector<rule_t2>>::iterator current_state;
@@ -76,7 +76,7 @@ value     \"[-a-z]+\"
                     BEGIN IN_RULE_SECTION;
                 }
 ^\%\{           {
-                    if (definition_section_code_buffer != "") {
+                    if (definition_section_code_buffer_str != "") {
                         return 1;
                     }
 
@@ -144,7 +144,7 @@ prefix={value}      {
 
 <IN_DEFINITION_SECTION_CODE>{
 .|\n    {
-            definition_section_code_buffer += yytext;
+            definition_section_code_buffer_str += yytext;
         }
 ^\%\}   {
             BEGIN IN_DEFINITION_SECTION;
@@ -232,7 +232,7 @@ prefix={value}      {
 
 <IN_CODE_SECTION>{
 (.|\n)* {
-            code_section_code_buffer += yytext;
+            code_section_code_buffer_str += yytext;
         }
 }
 
@@ -240,7 +240,7 @@ prefix={value}      {
 
 static
 void dump_parse_results(void) {
-    puts(definition_section_code_buffer.c_str());
+    puts(definition_section_code_buffer_str.c_str());
     puts("----------");
 
     for (const auto &i : rules) {
@@ -252,7 +252,7 @@ void dump_parse_results(void) {
     }
 
     puts("----------");
-    puts(code_section_code_buffer.c_str());
+    puts(code_section_code_buffer_str.c_str());
 }
 
 extern "C"
@@ -282,6 +282,8 @@ int parse(const char * filename) {
     }
     patterns[rules.size()] = (rule_t) { 0, NULL, NULL };
 
+    definition_section_code_buffer = strdup(definition_section_code_buffer_str.c_str());
+    code_section_code_buffer       = strdup(code_section_code_buffer_str.c_str());
 
     return r;
 }

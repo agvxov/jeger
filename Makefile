@@ -9,10 +9,11 @@ CPPFLAGS += ${CFLAGS}
 OUTPUT := jeger
 
 ${OUTPUT}: object/main.o object/generator.o object/jeger.yy.o
-	${LINK.cpp} -o ${OUTPUT} $?
+	${LINK.cpp} -o ${OUTPUT} $^ 
 
 test:
-	./${OUTPUT} source/jeger.l
+	./${OUTPUT} test/brainfuck.l 2>&1 | perl -pe "s/(\[.{1,4}\] = 128)/\x1b[90m\1\x1b[0m/g"
+	cat jeger.yy.c
 
 clean:
 	-rm ${OBJECT.d}/*.o

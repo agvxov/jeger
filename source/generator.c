@@ -4,6 +4,7 @@
 
 #include "util.h"
 #include "jeger.h"
+#include "snippets.inc"
 
 //#define AS_SYMBOL(c) (c-'a')
 #define AS_SYMBOL(c) ((int)c)
@@ -12,27 +13,29 @@
 int alphabet_size = 128;
 rule_t * patterns;
 
+char * definition_section_code_buffer;
+char * code_section_code_buffer;
+
+static int n_states = 0;
+
 static inline
 void put_header(FILE * f, const int alphabet_size, const int n_states, const int no_match) {
-    fputs(
-        "#define AS_SYMBOL(c) c\n", // (c-'a')\n
-        f
-    );
-    fprintf(
-        f,
-        "#define ALPHABET_SIZE %d\n",
-        alphabet_size
-    );
-    fprintf(
-        f,
-        "#define N_STATES      %d\n",
-        n_states
-    );
-    fprintf(
-        f,
-        "#define NO_MATCH      %d\n",
-        no_match
-    );
+    #define DEFINE_INT(m, n) fprintf(f, "#define " #m " %d\n", n);
+    #define DEFINE_STR(m, s) fprintf(f, "#define " #m " %s\n", s);
+
+    DEFINE_INT(ALPHABET_SIZE, alphabet_size);
+    DEFINE_INT(N_STATES, n_states);
+    DEFINE_INT(NO_MATCH, no_match);
+    DEFINE_STR(REVERSE, "(direction *= -1)");
+    fputs("#define AS_SYMBOL(c) c\n", /* (c-'a')\n */ f);
+
+    // XXX make this conditional
+    DEFINE_STR(TRACE, "fprintf(stderr, \"--accepting rule at line %d (\"%.*s\")\\n\", __LINE__, mlen, ss);");
+    DEFINE_STR(TRACE_DEFAULT, "fprintf(stderr, \"--accepting default rule (\"%c\")\\n\", *ss);");
+    // DEFINE_STR(TRACE, "");
+    // DEFINE_STR(TRACE_DEFAULT, "");
+    
+    fputs("int mlen;\n", f);
 
     fputs("\n", f);
 }
@@ -43,6 +46,9 @@ void put_table(FILE * f, const int * table, char * * prefixes, int n_states, int
     for (int i = 0; i < n_states; i++) {
         fprintf(f, "\t[%d] = {", i);
         for (int h = 0; h < alphabet_size; h++) {
+            /* NOTE: we have to awkwardly escate "\" and "'",
+             *        then also print printable characters as themselves
+             */
             if (h == '\\') {
                 fprintf(f, "['\\\\'] = %d, ", table[i*alphabet_size + h]);
             } else
@@ -60,15 +66,17 @@ void put_table(FILE * f, const int * table, char * * prefixes, int n_states, int
     fputs("};\n", f);
 }
 
-void put_state_table(int * states, int n) {
-    puts("int state_table[] = {");
+static
+void put_state_table(FILE * f, int * states, int n) {
+    fprintf(f, "int state_table[%d] = {\n", n);
     for (int i = 0; i < n; i++) {
         if (states[i] == -1) { break; }
-        printf("\t[%d] = %d,\n", i, states[i]);
+        fprintf(f, "\t[%d] = %d,\n", i, states[i]);
     }
-    puts("};");
+    fputs("};\n\n", f);
 }
 
+static
 int get_most_common_prefix(const char * pattern, char * * prefixes, int current_state_start) {
     int r = current_state_start;
     for (int i = current_state_start; prefixes[i] != NULL; i++) {
@@ -79,6 +87,7 @@ int get_most_common_prefix(const char * pattern, char * * prefixes, int current_
     return r;
 }
 
+static
 int get_max_number_of_states(const rule_t * patterns) {
     int r = 0;
     int state_max_accumulator = -1;
@@ -93,9 +102,10 @@ int get_max_number_of_states(const rule_t * patterns) {
     return r;
 }
 
-void generate(const char * filename) {
+static
+void make_and_put_table(FILE * f) {
     // Init
-    int n_states = get_max_number_of_states(patterns);
+    n_states = get_max_number_of_states(patterns);
 
     int states[n_states];
     INITIALIZE_ARRAY(states, n_states, -1);
@@ -176,7 +186,28 @@ void generate(const char * filename) {
     n_states = next_free_slot;
 
     // Output
-    put_header(stdout, alphabet_size, n_states, TOKEN_OFFSET);
-    put_table(stdout, (int*)table, prefixes, n_states, alphabet_size);
-    put_state_table(states, n_states);
+    put_table(f, (int*)table, prefixes, n_states, alphabet_size);
+    put_state_table(f, states, n_states);
+}
+
+static
+void put_functions(FILE * f) {
+    fputs(yy_lookup_str, f);
+
+    fputs(yy_lex_str_start, f);
+    for (rule_t * rule = patterns; rule->code != NULL; rule++) {
+        fprintf(f, "\tcase %ld: {\n" "%s\n" "\t} break;\n", rule - patterns, rule->code);
+    }
+    fputs(yy_lex_str_end, f);
+}
+
+void generate(const char * filename) {
+    FILE * f = fopen(filename, "w");
+
+    put_header(f, alphabet_size, n_states, TOKEN_OFFSET);
+    make_and_put_table(f);
+
+    fputs(definition_section_code_buffer, f);
+    put_functions(f);
+    fputs(code_section_code_buffer, f);
 }

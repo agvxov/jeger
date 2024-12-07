@@ -10,6 +10,9 @@ typedef struct {
 extern rule_t * patterns;
 extern int alphabet_size;
 
+extern char * definition_section_code_buffer;
+extern char * code_section_code_buffer;
+
 extern void generate(const char * filename);
 
 #endif
