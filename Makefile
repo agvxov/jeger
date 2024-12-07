@@ -8,8 +8,15 @@ CPPFLAGS += ${CFLAGS}
 
 OUTPUT := jeger
 
-main: object/main.o object/generator.o object/jeger.yy.o
-	${LINK.cxx}
+${OUTPUT}: object/main.o object/generator.o object/jeger.yy.o
+	${LINK.cpp} -o ${OUTPUT} $?
+
+test:
+	./${OUTPUT} source/jeger.l
+
+clean:
+	-rm ${OBJECT.d}/*.o
+	-rm ${OUTPUT}
 
 object/%.yy.cpp: source/%.l
 	flex -o $@ $<
@@ -18,4 +25,4 @@ object/%.o: source/%.c
 	${COMPILE.c} $< -o $@
 
 object/%.o: source/%.cpp
-	${COMPILE.cxx} $< -o $@
+	${COMPILE.cpp} $< -o $@

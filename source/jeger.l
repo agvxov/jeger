@@ -38,13 +38,13 @@
     typedef struct {
         char * pattern;
         char * code;
-    } rule_t;
+    } rule_t2;
 
     string definition_section_code_buffer;
     string code_section_code_buffer;
 
-    map<string, vector<rule_t>> rules;
-    map<string, vector<rule_t>>::iterator current_state;
+    map<string, vector<rule_t2>> rules;
+    map<string, vector<rule_t2>>::iterator current_state;
     string patter_buffer;
     string code_buffer;
 
@@ -191,7 +191,7 @@ prefix={value}      {
 \}      {
             --nest_counter;
             if (nest_counter == -1) {
-                current_state->second.push_back((rule_t) {
+                current_state->second.push_back((rule_t2) {
                     .pattern = strdup(patter_buffer.c_str()),
                     .code    = strdup(code_buffer.c_str()),
                 });
@@ -217,7 +217,7 @@ prefix={value}      {
 \\\\    { ; }
 \\\"    { ; }
 \"      { BEGIN IN_CODE; }
-.|\n    { ; }
+.|\n    { ; } /* XXX we are eating strings */
 }
 
 <IN_COMMENT>{
@@ -238,32 +238,8 @@ prefix={value}      {
 
 %%
 
-int parse(const char * filename) {
-    int r = 0;
-    FILE * f = fopen(filename, "r");
-    if (!f) { return 2; }
-
-    yyin = f;
-
-    r = yylex();
-    if (r) { return r; }
-
-    /* XXX fill globals */
-
-    return r;
-}
-
-#ifdef SCANNER_MAIN
-
-signed main(int argc, char * argv[]) {
-    if (argc < 2) { return 1; }
-
-    FILE * f = fopen(argv[1], "r");
-    if (!f) { return 2; }
-
-    yyin = f;
-    yylex();
-
+static
+void dump_parse_results(void) {
     puts(definition_section_code_buffer.c_str());
     puts("----------");
 
@@ -277,8 +253,35 @@ signed main(int argc, char * argv[]) {
 
     puts("----------");
     puts(code_section_code_buffer.c_str());
-
-    return 0;
 }
 
-#endif
+extern "C"
+int parse(const char * filename) {
+    int r = 0;
+    FILE * f = fopen(filename, "r");
+    if (!f) { return 2; }
+
+    yyin = f;
+
+    r = yylex();
+    if (r) { return r; }
+
+    dump_parse_results();
+
+    patterns = (rule_t*)malloc(sizeof(rule_t)*(rules.size()+1));
+
+    int i = 0;
+    for (const auto &rule_it : rules) {
+        for (const auto &rule : rule_it.second) {
+            patterns[i++] = (rule_t) {
+                .state = i,
+                .pattern = rule.pattern,
+                .code    = rule.code,
+            };
+        }
+    }
+    patterns[rules.size()] = (rule_t) { 0, NULL, NULL };
+
+
+    return r;
+}

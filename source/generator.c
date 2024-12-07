@@ -6,8 +6,11 @@
 #include "jeger.h"
 
 //#define AS_SYMBOL(c) (c-'a')
-#define AS_SYMBOL(c) c
+#define AS_SYMBOL(c) ((int)c)
 #define TOKEN_OFFSET 128 /* XXX */
+
+int alphabet_size = 128;
+rule_t * patterns;
 
 static inline
 void put_header(FILE * f, const int alphabet_size, const int n_states, const int no_match) {
@@ -76,7 +79,7 @@ int get_most_common_prefix(const char * pattern, char * * prefixes, int current_
     return r;
 }
 
-int get_max_number_of_states(const pattern_t * patterns) {
+int get_max_number_of_states(const rule_t * patterns) {
     int r = 0;
     int state_max_accumulator = -1;
     for (int i = 0; patterns[i].pattern != NULL; i++) {
@@ -111,7 +114,7 @@ void generate(const char * filename) {
       patterns[pattern_index].pattern != NULL;
       pattern_index++
     ) {
-        const pattern_t * pattern = &patterns[pattern_index];
+        const rule_t * pattern = &patterns[pattern_index];
 
         int current_state_start = states[pattern->state];
         if (current_state_start == -1) {

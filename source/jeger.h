@@ -3,10 +3,11 @@
 
 typedef struct {
     int state;
-    const char * pattern;
-} pattern_t;
+    char * pattern;
+    char * code;
+} rule_t;
 
-extern pattern_t * patterns;
+extern rule_t * patterns;
 extern int alphabet_size;
 
 extern void generate(const char * filename);
