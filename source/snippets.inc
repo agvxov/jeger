@@ -20,7 +20,11 @@ int mlookup(const char * s, int state) {\n\
 const char * yy_lex_str_start = "\n\
 int yylex(const char * s) {\n\
     int state = 0;\n\
-    for (const char * ss = s; *ss != '\\0'; ss += (mlen ? mlen : 1)) {\n\
+    for (\n\
+      const char * ss = s;\n\
+      *ss != '\\0';\n\
+      ss += ((mlen ? mlen : 1) * direction)\n\
+    ) {\n\
         int match = mlookup(ss, state_table[state]);\n\
         if (match != NO_MATCH) {\n\
             \n\

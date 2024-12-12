@@ -16,5 +16,8 @@ signed main(const int argc, char * argv[]) {
     parse(argv[1]);
     generate("jeger.yy.c");
 
+    deinit_parser();
+    deinit_jeger();
+
     return 0;
 }

@@ -2,9 +2,14 @@
     /* NOTE:
         its technically very bad taste to implement
         a minimalist lex subset with flex.
+        it was a devtime optimization.
         maybe it should be reimplemented in pure C when possible.
      */
+
+  extern "C" {
     #include "jeger.h"
+  }
+
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
@@ -13,13 +18,22 @@
     #include <vector>
     #include <string>
 
+    char * prefix = strdup("yy");
+    table_t table_type = STATIC_TABLE;
+    bool do_setup_lineno = false;
+
     using namespace std;
 
-    void set_alphanet_range(char s, char e) {
+    typedef struct {
+        char * pattern;
+        char * code;
+    } rule_t2;
+
+    static void set_alphanet_range(char s, char e) {
         // XXX not implemented
     }
 
-    void yyerror(const char * fmt, ...) {
+    static void yyerror(const char * fmt, ...) {
         va_list va;
         va_start(va, fmt);
 
@@ -30,29 +44,18 @@
         va_end(va);
     }
 
-    typedef enum {
-        STATIC_TABLE,
-        SWITCH_TABLE,
-    } table_t;
-
-    typedef struct {
-        char * pattern;
-        char * code;
-    } rule_t2;
-
     string definition_section_code_buffer_str;
     string code_section_code_buffer_str;
 
-    map<string, vector<rule_t2>> rules;
-    map<string, vector<rule_t2>>::iterator current_state;
-    string patter_buffer;
-    string code_buffer;
+    static map<string, vector<rule_t2>> rules_map;
+    static map<string, vector<rule_t2>>::iterator current_state;
+    static string patter_buffer;
+    static string code_buffer;
 
-    char * prefix = strdup("yy");
-    table_t table_type = STATIC_TABLE;
-    bool do_setup_lineno = false;
+    static int nest_counter = 0;
 
-    int nest_counter = 0;
+    static int source_state;
+    static string * source_buffer;
 %}
 %x IN_DEFINITION_SECTION IN_RULE_SECTION IN_CODE_SECTION
 %x IN_DEFINITION_SECTION_CODE
@@ -68,6 +71,7 @@ value     \"[-a-z]+\"
 %option yylineno
 %option nodefault
 %option noyywrap
+%option nounput
 %%
     BEGIN IN_DEFINITION_SECTION;
 
@@ -76,10 +80,6 @@ value     \"[-a-z]+\"
                     BEGIN IN_RULE_SECTION;
                 }
 ^\%\{           {
-                    if (definition_section_code_buffer_str != "") {
-                        return 1;
-                    }
-
                     BEGIN IN_DEFINITION_SECTION_CODE;
                 }
 \%x             {
@@ -87,6 +87,12 @@ value     \"[-a-z]+\"
                 }
 \%option        {
                     BEGIN IN_OPTION_LIST;
+                }
+\/\*            {
+                    definition_section_code_buffer_str += yytext;
+                    source_state = IN_DEFINITION_SECTION;
+                    source_buffer = &definition_section_code_buffer_str;
+                    BEGIN IN_MULTILINE_COMMENT;
                 }
 .               {
                     yyerror("baaaa");
@@ -96,7 +102,7 @@ value     \"[-a-z]+\"
 
 <IN_RULE_LIST>{
 {rule_name}     {
-                    rules[yytext] = {};
+                    rules_map[yytext] = {};
                 }
 {ws}*           { ; }
 \n              {
@@ -157,8 +163,8 @@ prefix={value}      {
                     }
 \<{rule_name}\>\{   {
                         string state_name(yytext+1, yyleng-3);
-                        current_state = rules.find(state_name);
-                        if (current_state == rules.end()) {
+                        current_state = rules_map.find(state_name);
+                        if (current_state == rules_map.end()) {
                             yyerror("State '%s' was never declared.", state_name.c_str());
                         }
 
@@ -168,14 +174,20 @@ prefix={value}      {
                         BEGIN IN_STATE_DEFINITION;
                     }
 .                   {
-                        yyerror("baaa");
+                        yyerror("Rule section giberish (temp warning).");
                     }
 \n                  { ; }
 }
 
 <IN_STATE_DEFINITION>{
+\}          {
+                BEGIN IN_RULE_SECTION;
+            }
 .           {
                 patter_buffer += yytext;
+            }
+\\.         {
+                patter_buffer += yytext + 1;
             }
 {wsnl}+\{   {
                 BEGIN IN_CODE;
@@ -186,6 +198,7 @@ prefix={value}      {
 
 <IN_CODE>{
 \{      {
+            code_buffer += yytext;
             ++nest_counter;
         }
 \}      {
@@ -196,16 +209,26 @@ prefix={value}      {
                     .code    = strdup(code_buffer.c_str()),
                 });
 
-                BEGIN IN_RULE_SECTION;
+                patter_buffer = "";
+                code_buffer = "";
+
+                BEGIN IN_STATE_DEFINITION;
+            } else {
+                code_buffer += yytext;
             }
         }
 \"      {
+            code_buffer += yytext;
             BEGIN IN_STRING;
         }
 \/\/    {
+            code_buffer += yytext;
             BEGIN IN_COMMENT;
         }
 \/\*    {
+            code_buffer += yytext;
+            source_state = IN_CODE;
+            source_buffer = &code_buffer;
             BEGIN IN_MULTILINE_COMMENT;
         }
 .|\n    {
@@ -214,20 +237,35 @@ prefix={value}      {
 }
 
 <IN_STRING>{
-\\\\    { ; }
-\\\"    { ; }
-\"      { BEGIN IN_CODE; }
-.|\n    { ; } /* XXX we are eating strings */
+\"      {
+            code_buffer += yytext;
+            BEGIN IN_CODE;
+        }
+\\\\    |
+\\\"    |
+.|\n    {
+            code_buffer += yytext;
+        }
 }
 
 <IN_COMMENT>{
-.       { ; }
-\n      { BEGIN IN_CODE; }
+.       {
+            code_buffer += yytext;
+        }
+\n      {
+            code_buffer += yytext;
+            BEGIN IN_CODE;
+        }
 }
 
 <IN_MULTILINE_COMMENT>{
-.|\n    { ; }
-\*\/    { BEGIN IN_CODE; }
+.|\n    {
+            *source_buffer += yytext;
+        }
+\*\/    {
+            *source_buffer += yytext;
+            BEGIN source_state;
+        }
 }
 
 <IN_CODE_SECTION>{
@@ -238,12 +276,13 @@ prefix={value}      {
 
 %%
 
+#if DEBUG == 1
 static
 void dump_parse_results(void) {
     puts(definition_section_code_buffer_str.c_str());
     puts("----------");
 
-    for (const auto &i : rules) {
+    for (const auto &i : rules_map) {
         printf("%s:\n", i.first.c_str());
         for (const auto &h : i.second) {
             printf("\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
@@ -255,35 +294,75 @@ void dump_parse_results(void) {
     puts(code_section_code_buffer_str.c_str());
 }
 
+static
+void dump_rules(void) {
+    for (rule_t * rule = rules; rule->pattern != NULL; rule++) {
+        printf("{ .state = %d, .pattern = %s, }\n",
+            rule->state,
+            rule->pattern
+        );
+    }
+    puts("{ .state = 0, .pattern = NULL, }");
+}
+#else
+static inline void dump_parse_results(void) { ; }
+static inline void dump_rules(void) { ; }
+#endif
+
 extern "C"
 int parse(const char * filename) {
+    // Init
     int r = 0;
     FILE * f = fopen(filename, "r");
     if (!f) { return 2; }
 
     yyin = f;
 
+    // Parse
     r = yylex();
     if (r) { return r; }
 
-    dump_parse_results();
+    // Set up globals
+    n_rules = 0;
+    for (const auto &rule_it : rules_map) {
+        n_rules += rule_it.second.size();
+    }
 
-    patterns = (rule_t*)malloc(sizeof(rule_t)*(rules.size()+1));
+    rules = (rule_t*)malloc(sizeof(rule_t)*(n_rules+1));
+    rules[n_rules] = (rule_t) { 0, NULL, NULL };
 
-    int i = 0;
-    for (const auto &rule_it : rules) {
+    int index = 0;
+    int state = 0;
+    for (const auto &rule_it : rules_map) {
         for (const auto &rule : rule_it.second) {
-            patterns[i++] = (rule_t) {
-                .state = i,
+            rules[index++] = (rule_t) {
+                .state   = state,
                 .pattern = rule.pattern,
                 .code    = rule.code,
             };
         }
+        ++state;
     }
-    patterns[rules.size()] = (rule_t) { 0, NULL, NULL };
+
+    n_states = rules_map.size();
+    state_names = (char**)malloc(sizeof(char*) * n_states);
+    int i = 0;
+    for (const auto &r : rules_map) {
+        state_names[i++] = strdup(r.first.c_str());
+    }
 
     definition_section_code_buffer = strdup(definition_section_code_buffer_str.c_str());
     code_section_code_buffer       = strdup(code_section_code_buffer_str.c_str());
 
+    // Debug
+    dump_parse_results();
+    dump_rules();
+
     return r;
+}
+
+extern "C"
+int deinit_parser(void) {
+    yylex_destroy();
+    return 0;
 }
