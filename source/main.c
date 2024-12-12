@@ -1,20 +1,30 @@
 #include <stdio.h>
+#include <string.h>
 
+#include "opts.h"
 #include "parse.h"
 #include "jeger.h"
 
-void usage(void) {
-    puts("jeger <file>");
+static
+char * to_output_name(const char * filename) {
+    return strdup("jeger.yy.c");
 }
 
-signed main(const int argc, char * argv[]) {
-    if (argc != 2) {
+signed main(const int argc, const char * argv[]) {
+    parse_arguments(argc, argv);
+
+    if (!input_filename) {
+        puts("No input file specified.");
         usage();
         return 1;
     }
 
-    parse(argv[1]);
-    generate("jeger.yy.c");
+    if (!output_filename) {
+        output_filename = to_output_name(input_filename);
+    }
+
+    parse(input_filename);
+    generate(output_filename);
 
     deinit_parser();
     deinit_jeger();

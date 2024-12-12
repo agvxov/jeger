@@ -8,6 +8,7 @@
 
   extern "C" {
     #include "jeger.h"
+    #include "opts.h"
   }
 
     #include <stdio.h>
@@ -276,7 +277,6 @@ prefix={value}      {
 
 %%
 
-#if DEBUG == 1
 static
 void dump_parse_results(void) {
     puts(definition_section_code_buffer_str.c_str());
@@ -304,10 +304,6 @@ void dump_rules(void) {
     }
     puts("{ .state = 0, .pattern = NULL, }");
 }
-#else
-static inline void dump_parse_results(void) { ; }
-static inline void dump_rules(void) { ; }
-#endif
 
 extern "C"
 int parse(const char * filename) {
@@ -355,8 +351,10 @@ int parse(const char * filename) {
     code_section_code_buffer       = strdup(code_section_code_buffer_str.c_str());
 
     // Debug
-    dump_parse_results();
-    dump_rules();
+    if (do_debug) {
+        dump_parse_results();
+        dump_rules();
+    }
 
     return r;
 }

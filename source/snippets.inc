@@ -26,17 +26,12 @@ int yylex(const char * s) {\n\
       ss += ((mlen ? mlen : 1) * direction)\n\
     ) {\n\
         int match = mlookup(ss, state_table[state]);\n\
-        if (match != NO_MATCH) {\n\
-            \n\
-        } else {\n\
-            \n\
-        }\n\
-        switch (match) {\n"
-;
+        switch (match) {\n\
+";
 
 const char * yy_lex_str_end = "\n\
         }\n\
     }\n\
     return 0;\n\
-}\n"
-;
+}\n\
+";

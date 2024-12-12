@@ -16,8 +16,9 @@ Another usage could be to scan unconventional info,
  for example command line arguments (without UB).
 
 # CLI
-[ ] --debug (dump tables)
-[X] --trace
+[X] --output
+[X] --debug (dump tables)
+[ ] --trace
 [ ] --table=[static|switch]
 
 # Syntax

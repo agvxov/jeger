@@ -4,6 +4,7 @@
 #include <ctype.h>
 
 #include "util.h"
+#include "opts.h"
 #include "jeger.h"
 #include "snippets.inc"
 
@@ -35,11 +36,13 @@ void put_header(FILE * f, const int alphabet_size, const int no_match) {
     DEFINE_STR(REVERSE, "(direction *= -1)");
     fputs("#define AS_SYMBOL(c) c\n", /* (c-'a')\n */ f);
 
-    // XXX make this conditional
-    DEFINE_STR(TRACE, "fprintf(stderr, \"--accepting rule at line %d (\"%.*s\")\\n\", __LINE__, mlen, ss);");
-    DEFINE_STR(TRACE_DEFAULT, "fprintf(stderr, \"--accepting default rule (\"%c\")\\n\", *ss);");
-    // DEFINE_STR(TRACE, "");
-    // DEFINE_STR(TRACE_DEFAULT, "");
+    if (do_trace) {
+        DEFINE_STR(TRACE, "fprintf(stderr, \"--accepting rule at line %d (\\\"%.*s\\\")\\n\", __LINE__, mlen, ss);");
+        DEFINE_STR(TRACE_DEFAULT, "fprintf(stderr, \"--accepting default rule (\"%c\")\\n\", *ss);");
+    } else {
+        DEFINE_STR(TRACE, "");
+        DEFINE_STR(TRACE_DEFAULT, "");
+    }
     
     // XXX we want no globals
     fputs("int mlen;\n", f);
@@ -49,9 +52,9 @@ void put_header(FILE * f, const int alphabet_size, const int no_match) {
 }
 
 static inline
-void put_table(FILE * f, const int * table, char * * prefixes, int n_states, int alphabet_size) {
+void put_table(FILE * f, const int * table, char * * prefixes, int n_cases, int alphabet_size) {
     fputs("int table[N_RULES][ALPHABET_SIZE] = {\n", f);
-    for (int i = 0; i < n_rules; i++) {
+    for (int i = 0; i < n_cases; i++) {
         fprintf(f, "\t[%d] = {", i);
         for (int h = 0; h < alphabet_size; h++) {
             /* NOTE: we have to awkwardly escate "\" and "'",
@@ -183,8 +186,10 @@ void make_and_put_table(FILE * f) {
         fputs("/* ================== */\n", stderr);
     }
 
+    const int n_cases = next_free_slot;
+
     // Output
-    put_table(f, (int*)table, prefixes, n_rules, alphabet_size);
+    put_table(f, (int*)table, prefixes, n_cases, alphabet_size);
     put_state_table(f, states);
 }
 
@@ -194,7 +199,13 @@ void put_functions(FILE * f) {
 
     fputs(yy_lex_str_start, f);
     for (rule_t * rule = rules; rule->code != NULL; rule++) {
-        fprintf(f, "\tcase %ld: {\n" "%s\n" "\t} break;\n", rule - rules, rule->code);
+        fprintf(
+            f,
+            "\tcase %ld: {\n"
+                "TRACE;\n"
+                "%s\n"
+            "\t} break;\n",
+            TOKEN_OFFSET + 1 + (rule - rules), rule->code);
     }
     fputs(yy_lex_str_end, f);
 }
