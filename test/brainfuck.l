@@ -56,11 +56,13 @@
             }
         }
 }
+%%
 
+    /*
 <INITIAL,IN_SKIP_FORWARD,IN_SKIP_BACKWARD>{
 .|\n    { ; }
 }
-%%
+    */
 
 signed main(int argc, char * argv[]) {
     if (argc != 2) {
