@@ -7,7 +7,7 @@
 
 static
 char * to_output_name(const char * filename) {
-    return strdup("jeger.yy.c");
+    return strdup("jeger.yy.c"); // XXX temp
 }
 
 signed main(const int argc, const char * argv[]) {
@@ -28,6 +28,7 @@ signed main(const int argc, const char * argv[]) {
 
     deinit_parser();
     deinit_jeger();
+    deinit_opts();
 
     return 0;
 }

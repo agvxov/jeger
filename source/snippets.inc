@@ -25,7 +25,7 @@ int yylex(const char * s) {\n\
       *ss != '\\0';\n\
       ss += ((mlen ? mlen : 1) * direction)\n\
     ) {\n\
-        int match = mlookup(ss, state_table[state]);\n\
+        int match = mlookup(ss, state);\n\
         switch (match) {\n\
 ";
 

@@ -19,7 +19,7 @@ ${OUTPUT}: object/main.o object/opts.o object/generator.o object/jeger.yy.o
 	${LINK.cpp} -o ${OUTPUT} $^ 
 
 test:
-	./${OUTPUT} -t -d test/brainfuck.l 2>&1 | tool/hl_table
+	./${OUTPUT} -d -t test/brainfuck.l 2>&1 | tool/hl_table
 	cat jeger.yy.c | tool/hl_table
 	gcc -o bf.out jeger.yy.c -ggdb
 	./bf.out test/hw.bf

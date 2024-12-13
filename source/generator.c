@@ -37,8 +37,14 @@ void put_header(FILE * f, const int alphabet_size, const int no_match) {
     fputs("#define AS_SYMBOL(c) c\n", /* (c-'a')\n */ f);
 
     if (do_trace) {
-        DEFINE_STR(TRACE, "fprintf(stderr, \"--accepting rule at line %d (\\\"%.*s\\\")\\n\", __LINE__, mlen, ss);");
-        DEFINE_STR(TRACE_DEFAULT, "fprintf(stderr, \"--accepting default rule (\"%c\")\\n\", *ss);");
+        DEFINE_STR(
+            TRACE(l),
+            "fprintf(stderr, \"--accepting rule at line %d (\\\"%.*s\\\")\\n\", l, mlen, ss);"
+        );
+        DEFINE_STR(
+            TRACE_DEFAULT,
+            "fprintf(stderr, \"--accepting default rule (\\\"%c\\\")\\n\", *ss);"
+        );
     } else {
         DEFINE_STR(TRACE, "");
         DEFINE_STR(TRACE_DEFAULT, "");
@@ -79,14 +85,6 @@ void put_table(FILE * f, const int * table, char * * prefixes, int n_cases, int 
 
 static
 void put_state_table(FILE * f, int * states) {
-    // XXX do i even need this table?
-    fprintf(f, "int state_table[%d] = {\n", n_states);
-    for (int i = 0; i < n_states; i++) {
-        if (states[i] == -1) { break; } // XXX
-        fprintf(f, "\t[%d] = %d,\n", i, states[i]);
-    }
-    fputs("};\n\n", f);
-
     for (int i = 0; i < n_states; i++) {
         fprintf(
             f,
@@ -182,8 +180,10 @@ void make_and_put_table(FILE * f) {
           = TOKEN_OFFSET+1 + rule_index
         ;
 
-        put_table(stderr, (int*)table, prefixes, n_rules, alphabet_size);
-        fputs("/* ================== */\n", stderr);
+        if (do_debug > 1) {
+            put_table(stderr, (int*)table, prefixes, n_rules, alphabet_size);
+            fputs("/* ================== */\n", stderr);
+        }
     }
 
     const int n_cases = next_free_slot;
@@ -198,14 +198,24 @@ void put_functions(FILE * f) {
     fputs(yy_lookup_str, f);
 
     fputs(yy_lex_str_start, f);
+    fprintf(
+        f,
+        "\tcase %d: {\n"
+            "TRACE_DEFAULT;\n"
+        "\t} break;\n",
+        TOKEN_OFFSET
+    );
     for (rule_t * rule = rules; rule->code != NULL; rule++) {
         fprintf(
             f,
             "\tcase %ld: {\n"
-                "TRACE;\n"
+                "TRACE(%d);\n"
                 "%s\n"
             "\t} break;\n",
-            TOKEN_OFFSET + 1 + (rule - rules), rule->code);
+            TOKEN_OFFSET + 1 + (rule - rules),
+            rule->line,
+            rule->code
+        );
     }
     fputs(yy_lex_str_end, f);
 }

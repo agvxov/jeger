@@ -8,6 +8,7 @@
     #include <stdio.h>
     char data[30000];
     char * data_ptr = data;
+    int nesting = 0;
 %}
 
 %x INITIAL IN_SKIP_FORWARD IN_SKIP_BACKWARD
@@ -26,7 +27,7 @@
         }
      }
 \]   {
-        if (!*data_ptr) {
+        if (*data_ptr) {
             REVERSE;
             BEGIN IN_SKIP_BACKWARD;
         }
@@ -34,15 +35,30 @@
 }
 
 <IN_SKIP_FORWARD>{
-\]     { BEGIN INITIAL; }
+\[      { ++nesting; }
+\]      {
+            if (!nesting) {
+                BEGIN INITIAL;
+            } else {
+                --nesting;
+            }
+        }
 }
 
 <IN_SKIP_BACKWARD>{
-\[     { REVERSE; BEGIN INITIAL; }
+\]      { ++nesting; }
+\[      {
+            if (!nesting) {
+                REVERSE;
+                BEGIN INITIAL;
+            } else {
+                --nesting;
+            }
+        }
 }
 
 <INITIAL,IN_SKIP_FORWARD,IN_SKIP_BACKWARD>{
-.|\n   { ; }
+.|\n    { ; }
 }
 %%
 

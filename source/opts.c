@@ -7,7 +7,7 @@
 #include "jeger.h"
 
 bool do_trace = false;
-bool do_debug = false;
+int do_debug = 0;
 
 char * output_filename = NULL;
 char * input_filename  = NULL;
@@ -47,7 +47,7 @@ int parse_arguments(const int argc, const char * * argv) {
                 do_trace = true;
             } break;
             case 'd': {
-                do_debug = true;
+                ++do_debug;
             } break;
             default: {
                 usage();
@@ -60,4 +60,9 @@ int parse_arguments(const int argc, const char * * argv) {
     }
 
     return 0;
+}
+
+void deinit_opts(void) {
+    free(output_filename);
+    free(input_filename);
 }

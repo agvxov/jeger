@@ -8,6 +8,7 @@ typedef struct {
     int state;
     char * pattern;
     char * code;
+    int line;
 } rule_t;
 
 typedef enum {

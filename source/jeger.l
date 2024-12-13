@@ -25,11 +25,6 @@
 
     using namespace std;
 
-    typedef struct {
-        char * pattern;
-        char * code;
-    } rule_t2;
-
     static void set_alphanet_range(char s, char e) {
         // XXX not implemented
     }
@@ -45,23 +40,23 @@
         va_end(va);
     }
 
-    string definition_section_code_buffer_str;
-    string code_section_code_buffer_str;
-
-    static map<string, vector<rule_t2>> rules_map;
-    static map<string, vector<rule_t2>>::iterator current_state;
-    static string patter_buffer;
-    static string code_buffer;
-
     static int nest_counter = 0;
-
     static int source_state;
     static string * source_buffer;
+
+    static string definition_section_code_buffer_str;
+    static string code_section_code_buffer_str;
+
+    static map<string, vector<rule_t>> rules_map;
+    static vector<map<string, vector<rule_t>>::iterator> current_states;
+    static string patter_buffer;
+    static string code_buffer;
+    static int line_buffer;
 %}
 %x IN_DEFINITION_SECTION IN_RULE_SECTION IN_CODE_SECTION
 %x IN_DEFINITION_SECTION_CODE
 %x IN_RULE_LIST IN_OPTION_LIST
-%x IN_STATE_DEFINITION
+%x IN_STATE_HEAD IN_STATE_DEFINITION
 %x IN_CODE IN_STRING IN_COMMENT IN_MULTILINE_COMMENT
 
 rule_name [A-Z_][A-Z0-9_]*
@@ -91,12 +86,12 @@ value     \"[-a-z]+\"
                 }
 \/\*            {
                     definition_section_code_buffer_str += yytext;
-                    source_state = IN_DEFINITION_SECTION;
+                    source_state  =  IN_DEFINITION_SECTION;
                     source_buffer = &definition_section_code_buffer_str;
                     BEGIN IN_MULTILINE_COMMENT;
                 }
 .               {
-                    yyerror("baaaa");
+                    yyerror("Unknown character encountered inside definition section ('%c') (temp warning)", yytext[0]);
                 }
 \n              { ; }
 }
@@ -162,26 +157,41 @@ prefix={value}      {
 \%\%                {
                         BEGIN IN_CODE_SECTION;
                     }
-\<{rule_name}\>\{   {
-                        string state_name(yytext+1, yyleng-3);
-                        current_state = rules_map.find(state_name);
-                        if (current_state == rules_map.end()) {
-                            yyerror("State '%s' was never declared.", state_name.c_str());
-                        }
-
-                        patter_buffer = "";
-                        code_buffer = "";
-
-                        BEGIN IN_STATE_DEFINITION;
+\<                  {
+                        BEGIN IN_STATE_HEAD;
                     }
 .                   {
-                        yyerror("Rule section giberish (temp warning).");
+                        yyerror("Rule section giberish (temp warning) ('%s').", yytext); // XXX
                     }
 \n                  { ; }
 }
 
+<IN_STATE_HEAD>{
+{rule_name} {
+                string state_name(yytext);
+                map<string, vector<rule_t>>::iterator current_state = rules_map.find(state_name);
+                if (current_state == rules_map.end()) {
+                    yyerror("State '%s' was never declared.", state_name.c_str());
+                } else {
+                    current_states.push_back(current_state);
+                }
+            }
+\>\{        {
+                patter_buffer = "";
+                code_buffer = "";
+
+                BEGIN IN_STATE_DEFINITION;
+            }
+,           |
+{wsnl}      { ; }
+.           { 
+                yyerror("Unknown character inside state head (%c).", yytext[0]);
+            }
+}
+
 <IN_STATE_DEFINITION>{
 \}          {
+                current_states.clear();
                 BEGIN IN_RULE_SECTION;
             }
 .           {
@@ -192,6 +202,7 @@ prefix={value}      {
             }
 {wsnl}+\{   {
                 BEGIN IN_CODE;
+                line_buffer = yylineno;
                 nest_counter = 0;
             }
 \n          { ; }
@@ -205,13 +216,17 @@ prefix={value}      {
 \}      {
             --nest_counter;
             if (nest_counter == -1) {
-                current_state->second.push_back((rule_t2) {
-                    .pattern = strdup(patter_buffer.c_str()),
-                    .code    = strdup(code_buffer.c_str()),
-                });
+                for (const auto &current_state : current_states) {
+                    current_state->second.push_back((rule_t) {
+                        .state   = -1, // NOTE: initialized elsewhere
+                        .pattern = strdup(patter_buffer.c_str()),
+                        .code    = strdup(code_buffer.c_str()),
+                        .line    = line_buffer,
+                    });
+                }
 
                 patter_buffer = "";
-                code_buffer = "";
+                code_buffer   = "";
 
                 BEGIN IN_STATE_DEFINITION;
             } else {
@@ -279,30 +294,35 @@ prefix={value}      {
 
 static
 void dump_parse_results(void) {
-    puts(definition_section_code_buffer_str.c_str());
-    puts("----------");
+    fputs("--- Definition section code buffer ---\n", stderr);
+    fputs(definition_section_code_buffer_str.c_str(), stderr);
+    fputs("\n----------\n", stderr);
 
+    fputs("--- Patterns ---\n", stderr);
     for (const auto &i : rules_map) {
-        printf("%s:\n", i.first.c_str());
+        fprintf(stderr, "%s:\n", i.first.c_str());
         for (const auto &h : i.second) {
-            printf("\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
+            fprintf(stderr, "\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
         }
-        puts("--");
+        fputs("--\n", stderr);
     }
 
-    puts("----------");
-    puts(code_section_code_buffer_str.c_str());
+    fputs("--- Code section code buffer ---\n", stderr);
+    fputs(code_section_code_buffer_str.c_str(), stderr);
+    fputs("\n----------\n", stderr);
 }
 
 static
 void dump_rules(void) {
     for (rule_t * rule = rules; rule->pattern != NULL; rule++) {
-        printf("{ .state = %d, .pattern = %s, }\n",
+        fprintf(
+            stderr,
+            "{ .state = %d, .pattern = `%s` }\n",
             rule->state,
             rule->pattern
         );
     }
-    puts("{ .state = 0, .pattern = NULL, }");
+    fputs("{ .state = 0, .pattern = NULL }\n", stderr);
 }
 
 extern "C"
@@ -335,6 +355,7 @@ int parse(const char * filename) {
                 .state   = state,
                 .pattern = rule.pattern,
                 .code    = rule.code,
+                .line    = rule.line,
             };
         }
         ++state;
