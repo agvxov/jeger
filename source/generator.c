@@ -191,6 +191,11 @@ void make_and_put_table(FILE * f) {
     // Output
     put_table(f, (int*)table, prefixes, n_cases, alphabet_size);
     put_state_table(f, states);
+
+    // Deinit
+    for (int i = 0; i < n_states; i++) {
+        free(prefixes[i]);
+    }
 }
 
 static
