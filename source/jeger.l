@@ -294,35 +294,34 @@ prefix={value}      {
 
 static
 void dump_parse_results(void) {
-    fputs("--- Definition section code buffer ---\n", stderr);
-    fputs(definition_section_code_buffer_str.c_str(), stderr);
-    fputs("\n----------\n", stderr);
+    fmdictate(stderr, '#', "--- Definition section code buffer ---");
+    fmdictate(stderr, '#', definition_section_code_buffer_str.c_str());
 
-    fputs("--- Patterns ---\n", stderr);
+    fmdictate(stderr, '&', "--- Code section code buffer ---");
+    fmdictate(stderr, '&', code_section_code_buffer_str.c_str());
+
+    fmdictate(stderr, '>', "--- Patterns ---");
     for (const auto &i : rules_map) {
-        fprintf(stderr, "%s:\n", i.first.c_str());
+        fmdictatef(stderr, '>', "%s:\n", i.first.c_str());
         for (const auto &h : i.second) {
-            fprintf(stderr, "\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
+            fmdictatef(stderr, '>', "\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
         }
-        fputs("--\n", stderr);
+        fmdictate(stderr, '>', "--");
     }
-
-    fputs("--- Code section code buffer ---\n", stderr);
-    fputs(code_section_code_buffer_str.c_str(), stderr);
-    fputs("\n----------\n", stderr);
 }
 
 static
 void dump_rules(void) {
+    fdictate(stderr, "--- Rules ---");
     for (rule_t * rule = rules; rule->pattern != NULL; rule++) {
-        fprintf(
+        fdictatef(
             stderr,
             "{ .state = %d, .pattern = `%s` }\n",
             rule->state,
             rule->pattern
         );
     }
-    fputs("{ .state = 0, .pattern = NULL }\n", stderr);
+    fdictate(stderr, "{ .state = 0, .pattern = NULL }");
 }
 
 extern "C"

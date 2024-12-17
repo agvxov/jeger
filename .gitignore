@@ -7,3 +7,4 @@ regtest
 *.yy.*
 .gdb_history
 gdb.txt
+library/dictate/
