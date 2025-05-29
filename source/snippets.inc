@@ -35,3 +35,22 @@ const char * yy_lex_str_end = "\n\
     return 0;\n\
 }\n\
 ";
+
+const char * yy_lex_switch_str_start = "\n\
+    int yylex(const char * s) {\n\
+        int state = 0;\n\
+        for (\n\
+          const char * ss = s;\n\
+          *ss != '\00';\n\
+          ss += ((mlen ? mlen : 1) * direction)\n\
+        ) {\n\
+            int match;\n\
+            switch (state) {\n\
+";
+
+const char * yy_lex_switch_str_end = "\n\
+        }\n\
+    }\n\
+    return 0;\n\
+}\n\
+";

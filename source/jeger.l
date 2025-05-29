@@ -7,6 +7,7 @@
      */
 
   extern "C" {
+    #include "dictate.h"
     #include "jeger.h"
     #include "opts.h"
   }
@@ -49,6 +50,7 @@
 
     static map<string, vector<rule_t>> rules_map;
     static vector<map<string, vector<rule_t>>::iterator> current_states;
+    static vector<code_t> codes_vec;
     static string patter_buffer;
     static string code_buffer;
     static int line_buffer;

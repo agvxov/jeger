@@ -7,9 +7,16 @@
 typedef struct {
     int state;
     char * pattern;
+    int code_index;
+    // temp
     char * code;
     int line;
 } rule_t;
+
+typedef struct {
+    char * code;
+    int line;
+} code_t;
 
 typedef enum {
     STATIC_TABLE,
@@ -18,6 +25,7 @@ typedef enum {
 
 // Globals
 extern rule_t * rules;
+extern code_t * codes;
 extern int n_rules;
 extern char * * state_names;
 extern int n_states;

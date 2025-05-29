@@ -109,6 +109,12 @@ int get_most_common_prefix(const char * pattern, char * * prefixes, int current_
 }
 
 static
+void make_and_put_switch(FILE * f) {
+    fputs("Not implemented.", stderr);
+    exit(1);
+}
+
+static
 void make_and_put_table(FILE * f) {
     // Init
     int states[n_states];
@@ -241,10 +247,23 @@ void deinit_jeger(void) {
 void generate(const char * filename) {
     FILE * f = fopen(filename, "w");
 
-    put_header(f, alphabet_size, TOKEN_OFFSET);
-    make_and_put_table(f);
+    switch (table_type) {
+        case STATIC_TABLE: {
+            put_header(f, alphabet_size, TOKEN_OFFSET);
+            fputs(definition_section_code_buffer, f);
 
-    fputs(definition_section_code_buffer, f);
-    put_functions(f);
-    fputs(code_section_code_buffer, f);
+            make_and_put_table(f);
+
+            put_functions(f);
+            fputs(code_section_code_buffer, f);
+        } break;
+        case SWITCH_TABLE: {
+            put_header(f, alphabet_size, TOKEN_OFFSET);
+            fputs(definition_section_code_buffer, f);
+
+            make_and_put_switch(f);
+
+            fputs(code_section_code_buffer, f);
+        } break;
+    }
 }
