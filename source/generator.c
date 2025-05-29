@@ -132,7 +132,7 @@ void make_and_put_table(FILE * f) {
 
         int current_state_start = states[rule->state];
         if (current_state_start == -1) {
-            current_state_start    = next_free_slot;
+            current_state_start = next_free_slot;
             states[rule->state] = next_free_slot;
             ++next_free_slot;
         }
@@ -189,8 +189,8 @@ void make_and_put_table(FILE * f) {
     const int n_cases = next_free_slot;
 
     // Output
-    put_table(f, (int*)table, prefixes, n_cases, alphabet_size);
     put_state_table(f, states);
+    put_table(f, (int*)table, prefixes, n_cases, alphabet_size);
 
     // Deinit
     for (int i = 0; i < n_states; i++) {
