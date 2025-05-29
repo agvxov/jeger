@@ -24,7 +24,6 @@ void usage(void) {
 
 int parse_arguments(const int argc, const char * * argv) {
     int opt;
-    const char * output_file = NULL;
 
     static struct option long_options[] = {
         {"output", required_argument, 0, 'o'},
