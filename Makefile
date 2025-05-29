@@ -61,7 +61,10 @@ ${OUT}: ${GENSOURCE} ${OBJECT}
 	${COMPILE.c} -o ${OBJECT.d}/$@ ${OBJECT.d}/$<
 
 test:
-	cmdtest --fast
+	./${OUT} -d -t test/brainfuck.l 2>&1 | tool/hl_table
+	cat jeger.yy.c | tool/hl_table
+	gcc -o bf.out jeger.yy.c -ggdb
+	./bf.out test/hw.bf
 
 clean:
 	-${RM} $(or ${OBJECT.d},#)/*
