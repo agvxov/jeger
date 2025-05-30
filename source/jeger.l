@@ -7,7 +7,6 @@
      */
 
   extern "C" {
-    #include "dictate.h"
     #include "jeger.h"
     #include "opts.h"
   }
@@ -19,9 +18,12 @@
     #include <map>
     #include <vector>
     #include <string>
+    #include "dictate.hpp"
 
     char * prefix = strdup("yy");
+    // XXX terrible place to define it
     table_t table_type = STATIC_TABLE;
+    //table_t table_type = SWITCH_TABLE;
     bool do_setup_lineno = false;
 
     using namespace std;
@@ -296,20 +298,26 @@ prefix={value}      {
 
 static
 void dump_parse_results(void) {
-    fmdictate(stderr, '#', "--- Definition section code buffer ---");
-    fmdictate(stderr, '#', definition_section_code_buffer_str.c_str());
+  #define MDEFI "# "
+  #define MCODE "& "
+  #define MRULE "> "
+    fmdictate(stderr, MDEFI, "--- Definition section code buffer ---");
+    fmdictate(stderr, MDEFI, definition_section_code_buffer_str.c_str());
 
-    fmdictate(stderr, '&', "--- Code section code buffer ---");
-    fmdictate(stderr, '&', code_section_code_buffer_str.c_str());
+    fmdictate(stderr, MCODE, "--- Code section code buffer ---");
+    fmdictate(stderr, MCODE, code_section_code_buffer_str.c_str());
 
-    fmdictate(stderr, '>', "--- Patterns ---");
+    fmdictate(stderr, MRULE, "--- Patterns ---");
     for (const auto &i : rules_map) {
-        fmdictatef(stderr, '>', "%s:\n", i.first.c_str());
+        fmdictatef(stderr, MRULE, "%s:\n", i.first.c_str());
         for (const auto &h : i.second) {
-            fmdictatef(stderr, '>', "\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
+            fmdictatef(stderr, MRULE, "\tpattern:\n%s\n" "\tcode:\n%s\n", h.pattern, h.code);
         }
-        fmdictate(stderr, '>', "--");
+        fmdictate(stderr, MRULE, "--");
     }
+  #undef MDEFI
+  #undef MCODE
+  #undef MRULE
 }
 
 static

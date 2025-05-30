@@ -5,6 +5,7 @@ regtest
 *.o
 *.data
 *.yy.*
+object/*
 .gdb_history
 gdb.txt
 library/dictate/

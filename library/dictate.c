@@ -1,51 +1,58 @@
 #include "dictate.h"
+#include <string.h>
 
 /* ## Dictate Imeplementation
  */
 
-// Do not ever set by hand, might be subject to change
-static int color_enabled_global__ = 1;
-static int pedantic_flushing__    = 1;
+// These might be subject to change
+static thread_local int color_enabled_global__ = 1;
+static thread_local int pedantic_flushing__    = 1;
 
-void dictate_pedantic_flush(int b) { pedantic_flushing__    = b; }
-void dictate_color_enabled(int b)  { color_enabled_global__ = b; }
+void dictate_pedantic_flush(bool b) { pedantic_flushing__    = b; }
+void dictate_color_enabled(bool b)  { color_enabled_global__ = b; }
 
-// Every other function is ultimetly a wrapper around this one
+#define PRINT_MARGIN do { \
+        if (margin) { \
+            file_margin_dictate_conditional_format(f, NULL, false, margin); \
+        } \
+    } while (0)
+
+// dependency for the core function (recursion with indirection)
+static
+void file_margin_dictate_conditional_format(
+    FILE * const f,
+    const char * const margin,
+    bool do_process_format,
+    const char * const str,
+    ...
+);
+
+// Every format function is ultimetly a wrapper around this one
 static
 void vararg_file_margin_dictate_conditional_format(
-    FILE * f,
-    char margin,
-    int do_process_format,
-    const char * fmt,
+    FILE * const f,
+    const char * const margin,
+    bool do_process_format,
+    const char * const fmt,
     va_list args
   ) {
-    inline
-    void print_margin(char margin) {
-        const int margin_width = 3;
-        if (margin) {
-            for (int i = 0; i < margin_width; i++) {
-                fputc(margin, f);
-            }
-            fputc(' ', f);
-        }
-    }
-
-    print_margin(margin);
-
     for (const char * s = fmt; *s != '\0'; s++) {
         switch (*s) {
             case '$': { // Color handling
                 if (color_enabled_global__) {
                     switch (*(++s)) {
-                        case 'r': fprintf(f, "\033[31m"); break;
-                        case 'g': fprintf(f, "\033[32m"); break;
-                        case 'b': fprintf(f, "\033[34m"); break;
-                        case 'y': fprintf(f, "\033[33m"); break;
-                        case 'm': fprintf(f, "\033[35m"); break;
-                        case 'c': fprintf(f, "\033[36m"); break;
-                        case 'B': fprintf(f, "\033[1m"); break;
-                        case 'I': fprintf(f, "\033[3m"); break;
-                        case '0': fprintf(f, "\033[0m"); break;
+                        case 'r': fputs("\033[31m", f); break; // red
+                        case 'g': fputs("\033[32m", f); break; // green
+                        case 'b': fputs("\033[34m", f); break; // blue
+                        case 'y': fputs("\033[33m", f); break; // yellow
+                        case 'm': fputs("\033[35m", f); break; // magenta
+                        case 'c': fputs("\033[36m", f); break; // cyan
+                        case 'd': fputs("\033[30m", f); break; // dark (black)
+                        case 'w': fputs("\033[37m", f); break; // white
+                        case 'B': fputs("\033[1m",  f); break;
+                        case 'I': fputs("\033[3m",  f); break;
+                        case '0': fputs("\033[0m",  f); break;
+                        case '$': fputs("$",        f); break;
                         default: --s; break; // Invalid color code, backtrack
                     }
                 } else {
@@ -57,9 +64,12 @@ void vararg_file_margin_dictate_conditional_format(
                         case 'y': ;
                         case 'm': ;
                         case 'c': ;
+                        case 'd': ;
+                        case 'w': ;
                         case 'B': ;
                         case 'I': ;
                         case '0': break;
+                        case '$': fputc('$', f);
                         default: --s; break;
                     }
                 }
@@ -98,10 +108,10 @@ void vararg_file_margin_dictate_conditional_format(
 
                         --s;
 
-                        goto p;
+                        goto width_switch;
                     case '*': // Dynamic width
                         width = va_arg(args, long long);
-                      p:
+                      width_switch:
                         switch (*(++s)) {
                             case 'd': {
                                 long long x = va_arg(args, long long);
@@ -129,7 +139,7 @@ void vararg_file_margin_dictate_conditional_format(
             case '\n': { // Margin handling
                 fputc('\n', f);
                 if (*(s+1) != '\0') {
-                    print_margin(margin);
+                    PRINT_MARGIN;
                 }
             } break;
 
@@ -142,81 +152,81 @@ void vararg_file_margin_dictate_conditional_format(
     if (pedantic_flushing__) {
         fflush(f);
     }
-
 }
 
 static
-void file_margin_dictate_conditional_format(FILE *f, char margin, const char * str, ...) {
+void file_margin_dictate_conditional_format(
+    FILE * const f,
+    const char * const margin,
+    bool do_process_format,
+    const char * const str,
+    ...
+) {
     va_list args;
     va_start(args, str);
-    vararg_file_margin_dictate_conditional_format(f, margin, 0, str, args);
+    vararg_file_margin_dictate_conditional_format(f, margin, do_process_format, str, args);
     va_end(args);
 }
 
-void vafmdictatef(FILE * f, char margin, const char * fmt, va_list args) {
-    vararg_file_margin_dictate_conditional_format(f, margin, 1, fmt, args);
-}
-
-
-void fmdictate(FILE *f, char margin, const char * str) {
-    file_margin_dictate_conditional_format(f, margin, str);
-    fputs("\n", f);
-}
-
-// Wrapping fmdictate
-
-void dictate(const char * str) {
-    fmdictate(stdout, '\00', str);
-}
-
-void fdictate(FILE * f, const char * str) {
-    fmdictate(f, '\00', str);
-}
-
-void mdictate(char margin, const char * str) {
-    fmdictate(stdout, margin, str);
+void vafmdictatef(FILE * const f, const char * const margin, const char * const fmt, va_list args) {
+    PRINT_MARGIN;
+    vararg_file_margin_dictate_conditional_format(f, margin, true, fmt, args);
 }
 
 // Wrapping vafmdictatef
 
-void fmdictatef(FILE * f, char margin, const char * fmt, ...) {
+void fmdictatef(FILE * const f, const char * const margin, const char * const fmt, ...) {
     va_list args;
     va_start(args, fmt);
     vafmdictatef(f, margin, fmt, args);
     va_end(args);
 }
 
-void dictatef(const char * fmt, ...) {
+void dictatef(const char * const fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    vafmdictatef(stdout, '\00', fmt, args);
+    vafmdictatef(stdout, NULL, fmt, args);
     va_end(args);
 }
 
-void vadictatef(const char * fmt, va_list args) {
-    vafmdictatef(stdout, '\00', fmt, args);
+void vadictatef(const char * const fmt, va_list args) {
+    vafmdictatef(stdout, NULL, fmt, args);
 }
 
-void fdictatef(FILE * f, const char * fmt, ...) {
+void fdictatef(FILE * const f, const char * const fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    vafmdictatef(f, '\00', fmt, args);
+    vafmdictatef(f, NULL, fmt, args);
     va_end(args);
 }
 
-void vafdictatef(FILE * f, const char * fmt, va_list args) {
-    vafmdictatef(f, '\00', fmt, args);
+void vafdictatef(FILE * const f, const char * const fmt, va_list args) {
+    vafmdictatef(f, NULL, fmt, args);
 }
 
-void mdictatef(char margin, const char * fmt, ...) {
+void mdictatef(const char * const margin, const char * const fmt, ...) {
     va_list args;
     va_start(args, fmt);
     vafmdictatef(stdout, margin, fmt, args);
     va_end(args);
 }
 
-void vamdictatef(char margin, const char * fmt, va_list args) {
+void vamdictatef(const char * const margin, const char * const fmt, va_list args) {
     vafmdictatef(stdout, margin, fmt, args);
 }
 
-// Dictate is in the Public Domain, and if say this is not a legal notice, I will sue you.
+// Complex type printers
+void dictate_str(FILE * const f, const char * const margin, int h, int n, const char * const str) {
+    if (h == 1) {
+        PRINT_MARGIN;
+    }
+
+    file_margin_dictate_conditional_format(f, margin, false, str);
+
+    if (h != n
+    &&  str[strlen(str)-1] == '\n') {
+        PRINT_MARGIN;
+    }
+}
+
+// Dictate is in the Public Domain, and if you say this is not a legal notice, I will sue you.

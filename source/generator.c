@@ -6,6 +6,9 @@
 #include "util.h"
 #include "opts.h"
 #include "jeger.h"
+
+#include <sds.h>
+#include <ministach.h>
 #include "snippets.inc"
 
 // XXX
@@ -26,8 +29,8 @@ char * code_section_code_buffer;
 
 static inline
 void put_header(FILE * f, const int alphabet_size, const int no_match) {
-    #define DEFINE_INT(m, n) fprintf(f, "#define " #m " %d\n", n);
-    #define DEFINE_STR(m, s) fprintf(f, "#define " #m " %s\n", s);
+  #define DEFINE_INT(m, n) fprintf(f, "#define " #m " %d\n", n);
+  #define DEFINE_STR(m, s) fprintf(f, "#define " #m " %s\n", s);
 
     DEFINE_INT(ALPHABET_SIZE, alphabet_size);
     DEFINE_INT(N_RULES, n_rules);
@@ -55,6 +58,8 @@ void put_header(FILE * f, const int alphabet_size, const int no_match) {
     fputs("int direction = 1;\n", f);
 
     fputs("\n", f);
+  #undef DEFINE_INT
+  #undef DEFINE_STR
 }
 
 static inline
@@ -205,20 +210,24 @@ void make_and_put_table(FILE * f) {
 }
 
 static
-void put_functions(FILE * f) {
-    fputs(yy_lookup_str, f);
+const char * static_stach(const char * k, int l, void * d) {
+    return (char*)d;
+}
 
-    fputs(yy_lex_str_start, f);
-    fprintf(
-        f,
+static
+void put_functions(FILE * f) {
+    sds inner_code = sdsnew("");
+
+    inner_code = sdscatprintf(
+        inner_code,
         "\tcase %d: {\n"
             "TRACE_DEFAULT;\n"
         "\t} break;\n",
         TOKEN_OFFSET
     );
     for (rule_t * rule = rules; rule->code != NULL; rule++) {
-        fprintf(
-            f,
+        inner_code = sdscatprintf(
+            inner_code,
             "\tcase %ld: {\n"
                 "TRACE(%d);\n"
                 "%s\n"
@@ -228,7 +237,18 @@ void put_functions(FILE * f) {
             rule->code
         );
     }
-    fputs(yy_lex_str_end, f);
+
+    fputs(yy_lookup_inc, f);
+
+    ministach_t m;
+    ministach_compile(&m, yy_lex_inc, static_stach, inner_code);
+    char * buffer = (char*)malloc((m.size + 1) * sizeof(char));
+    ministach_render(&m, buffer);
+    sdsfree(inner_code);
+
+    fputs(buffer, f);
+
+    free(buffer);
 }
 
 void deinit_jeger(void) {

@@ -1,24 +1,24 @@
 # Rationale
-now, as it turns out BF + Flex is unholy.
+Now, as it turns out BF + Flex is unholy.
 bf ']' requires moving backwards one way or another.
 
-flex can in fact not do that in any documented way,
- theoretically it should be possible to fuck with
- the internal pointers using macros and constantly
- emptying the buffers, but that does not sound fun.
+Flex can, in fact, not do that in any documented way.
+Theoretically it should be possible to fuck with
+the internal pointers using macros and constantly
+emptying the buffers, but that does not sound fun.
 
 What does sound fun however, is writting a mini-flex
- which has only the most surface level features,
- BUT is fully hackable, embeded friedly with
- minimal memory requirements and a somewhat proper subset of flex.
+which has only the most surface level features,
+BUT is fully hackable, embeded friedly with
+minimal memory requirements and a somewhat proper subset of flex.
 
 Another usage could be to scan unconventional info,
- for example command line arguments (without UB).
+for example command line arguments (without UB).
 
 # CLI
 [X] --output
 [X] --debug (dump tables)
-[ ] --trace
+[X] --trace
 [ ] --table=[static|switch]
 
 # Syntax

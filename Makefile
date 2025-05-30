@@ -6,7 +6,7 @@ SOURCE.d := source/
 OBJECT.d := object/
 LIB.d	:= library/
 
-SOURCE := main.c opts.c generator.c dictate.c
+SOURCE := main.c opts.c generator.c dictate.c sds.c
 OBJECT := ${SOURCE}
 OBJECT := $(subst .cpp,.o,${OBJECT})
 OBJECT := $(subst .c,.o,${OBJECT})
@@ -20,6 +20,7 @@ vpath %.l ${SOURCE.d}
 vpath %.y ${SOURCE.d}
 vpath %.cpp ${SOURCE.d}
 vpath %.yy.c ${OBJECT.d}
+vpath %.inc ${OBJECT.d}
 
 OUT := jeger
 
@@ -32,7 +33,7 @@ ifeq (${DEBUG}, 1)
 
   CFLAGS.D += -Wall -Wextra -Wpedantic
   CFLAGS.D += -O0 -ggdb -fno-inline
-  CFLAGS.D += -fsanitize=address,undefined
+  #CFLAGS.D += -fsanitize=address,undefined
   CFLAGS   += ${CFLAGS.D}
   CXXFLAGS += ${CFLAGS.D}
 else
@@ -40,12 +41,14 @@ else
 endif
 
 CPPFLAGS += -I${SOURCE.d} -I${OBJECT.d} -I${LIB.d}
+CFLAGS += -std=c23
 LDLIBS := -ldictate
+CXXFLAGS += -std=c++20
 
 # --- Rule Section ---
 all: ${OUT}
 
-${OUT}: ${GENSOURCE} ${OBJECT}
+${OUT}: ${GENSOURCE} snippets.inc ${OBJECT}
 	${LINK.cpp} -o $@ $(addprefix ${OBJECT.d}/,${OBJECT} ${GENSOURCE}) ${LDLIBS}
 
 %.o: %.c
@@ -59,6 +62,9 @@ ${OUT}: ${GENSOURCE} ${OBJECT}
 
 %.yy.o: %.yy.c
 	${COMPILE.c} -o ${OBJECT.d}/$@ ${OBJECT.d}/$<
+
+snippets.inc: resource/*
+	{ echo "#include <stddef.h>"; tool/embed.tcl $+; } > ${OBJECT.d}/$@
 
 test:
 	./${OUT} -d -t -o jeger_bf.yy.c test/brainfuck.l 2>&1 | tool/hl_table
