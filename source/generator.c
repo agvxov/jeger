@@ -26,18 +26,20 @@ int alphabet_size = 128;
 char * definition_section_code_buffer;
 char * code_section_code_buffer;
 
+// Code generation microlang
+#define DEFINE_INT(m, n) fprintf(f, "#define " #m " %d\n", n);
+#define DEFINE_STR(m, s) fprintf(f, "#define " #m " %s\n", s);
+#define ECHOF(s, ...)    fprintf(f, s, __VA_ARGS__);
+#define ECHO(s, ...)     fputs(s, f);
 
 static inline
 void put_header(FILE * f, const int alphabet_size, const int no_match) {
-  #define DEFINE_INT(m, n) fprintf(f, "#define " #m " %d\n", n);
-  #define DEFINE_STR(m, s) fprintf(f, "#define " #m " %s\n", s);
-
     DEFINE_INT(ALPHABET_SIZE, alphabet_size);
     DEFINE_INT(N_RULES, n_rules);
     DEFINE_INT(NO_MATCH, no_match);
     DEFINE_STR(BEGIN, "state = ");
     DEFINE_STR(REVERSE, "(direction *= -1)");
-    fputs("#define AS_SYMBOL(c) c\n", /* (c-'a')\n */ f);
+    ECHO("#define AS_SYMBOL(c) c\n", /* (c-'a')\n */ f);
 
     if (do_trace) {
         DEFINE_STR(
@@ -54,52 +56,49 @@ void put_header(FILE * f, const int alphabet_size, const int no_match) {
     }
     
     // XXX we want no globals
-    fputs("int mlen;\n", f);
-    fputs("int direction = 1;\n", f);
+    ECHO("int mlen;\n");
+    ECHO("int direction = 1;\n");
 
-    fputs("\n", f);
-  #undef DEFINE_INT
-  #undef DEFINE_STR
+    ECHO("\n");
 }
 
 static inline
 void put_table(FILE * f, const int * table, char * * prefixes, int n_cases, int alphabet_size) {
-    fputs("int table[N_RULES][ALPHABET_SIZE] = {\n", f);
+    ECHO("int table[N_RULES][ALPHABET_SIZE] = {\n");
     for (int i = 0; i < n_cases; i++) {
-        fprintf(f, "\t[%d] = {", i);
+        ECHOF("\t[%d] = {", i);
         for (int h = 0; h < alphabet_size; h++) {
             /* NOTE: we have to awkwardly escate "\" and "'",
              *        then also print printable characters as themselves
              */
             if (h == '\\') {
-                fprintf(f, "['\\\\'] = %d, ", table[i*alphabet_size + h]);
+                ECHOF("['\\\\'] = %d, ", table[i*alphabet_size + h]);
             } else
             if (h == '\'') {
-                fprintf(f, "['\\''] = %d, ", table[i*alphabet_size + h]);
+                ECHOF("['\\''] = %d, ", table[i*alphabet_size + h]);
             } else
             if (isprint(h)) {
-                fprintf(f, "['%c'] = %d, ", h, table[i*alphabet_size + h]);
+                ECHOF("['%c'] = %d, ", h, table[i*alphabet_size + h]);
             } else {
-                fprintf(f, "[%d] = %d, ", h, table[i*alphabet_size + h]);
+                ECHOF("[%d] = %d, ", h, table[i*alphabet_size + h]);
             }
         }
-        fprintf(f, "}, /* \"%s\" */\n", prefixes[i]); // XXX can break
+        ECHOF("}, /* \"%s\" */\n", prefixes[i]); // XXX can break
     }
-    fputs("};\n", f);
+    ECHO("};\n");
 }
 
 static
 void put_state_table(FILE * f, int * states) {
     for (int i = 0; i < n_states; i++) {
-        fprintf(
-            f,
+        ECHOF(
             "#define %s %d\n",
             state_names[i],
             states[i]
         );
     }
 
-    fputs("\n", f);
+    ECHO("\n");
 }
 
 static
@@ -238,7 +237,7 @@ void put_functions(FILE * f) {
         );
     }
 
-    fputs(yy_lookup_inc, f);
+    ECHO(yy_lookup_inc);
 
     ministach_t m;
     ministach_compile(&m, yy_lex_inc, static_stach, inner_code);
@@ -246,7 +245,7 @@ void put_functions(FILE * f) {
     ministach_render(&m, buffer);
     sdsfree(inner_code);
 
-    fputs(buffer, f);
+    ECHO(buffer);
 
     free(buffer);
 }
@@ -270,20 +269,20 @@ void generate(const char * filename) {
     switch (table_type) {
         case STATIC_TABLE: {
             put_header(f, alphabet_size, TOKEN_OFFSET);
-            fputs(definition_section_code_buffer, f);
+            ECHO(definition_section_code_buffer);
 
             make_and_put_table(f);
 
             put_functions(f);
-            fputs(code_section_code_buffer, f);
+            ECHO(code_section_code_buffer);
         } break;
         case SWITCH_TABLE: {
             put_header(f, alphabet_size, TOKEN_OFFSET);
-            fputs(definition_section_code_buffer, f);
+            ECHO(definition_section_code_buffer);
 
             make_and_put_switch(f);
 
-            fputs(code_section_code_buffer, f);
+            ECHO(code_section_code_buffer);
         } break;
     }
 }
