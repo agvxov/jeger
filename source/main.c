@@ -7,7 +7,27 @@
 
 static
 char * to_output_name(const char * filename) {
-    return strdup("jeger.yy.c"); // XXX temp
+    size_t filename_len = strlen(filename);
+    size_t buffer_size = filename_len + sizeof(".yy.");
+    char buffer[buffer_size];
+
+    const char * last_slash = strrchr(filename, '/');
+    const char * basename = (last_slash ? last_slash + 1 : filename);
+    const char * dot = strrchr(basename, '.');
+
+    if (dot) {
+        // Insert ".yy." before the extension
+        size_t prefix_len = dot - filename;
+        memcpy(buffer, filename, prefix_len);
+        memcpy(buffer + prefix_len, ".yy.", 4);
+        strcpy(buffer + prefix_len + 4, dot + 1);
+    } else {
+        // No extension, append ".yy"
+        memcpy(buffer, filename, filename_len);
+        memcpy(buffer + filename_len, ".yy", 4);
+    }
+
+    return strdup(buffer);
 }
 
 signed main(const int argc, const char * argv[]) {
