@@ -32,6 +32,7 @@ char * code_section_code_buffer;
 #define ECHOF(s, ...)    fprintf(f, s, __VA_ARGS__);
 #define ECHO(s, ...)     fputs(s, f);
 
+// ### Generic
 static inline
 void put_header(FILE * f, const int alphabet_size, const int no_match) {
     DEFINE_INT(ALPHABET_SIZE, alphabet_size);
@@ -62,6 +63,7 @@ void put_header(FILE * f, const int alphabet_size, const int no_match) {
     ECHO("\n");
 }
 
+// ### Table only
 static inline
 void put_table(FILE * f, const int * table, char * * prefixes, int n_cases, int alphabet_size) {
     ECHO("int table[N_RULES][ALPHABET_SIZE] = {\n");
@@ -110,12 +112,6 @@ int get_most_common_prefix(const char * pattern, char * * prefixes, int current_
         }
     }
     return r;
-}
-
-static
-void make_and_put_switch(FILE * f) {
-    fputs("Not implemented.", stderr);
-    exit(1);
 }
 
 static
@@ -250,6 +246,39 @@ void put_functions(FILE * f) {
     free(buffer);
 }
 
+
+// ### Switch only
+static
+void make_and_put_switch(FILE * f) {
+    fputs("Not implemented.", stderr);
+    exit(1);
+}
+
+// ### Extern
+void generate(const char * filename) {
+    FILE * f = fopen(filename, "w");
+
+    switch (table_type) {
+        case STATIC_TABLE: {
+            put_header(f, alphabet_size, TOKEN_OFFSET);
+            ECHO(definition_section_code_buffer);
+            // %%
+            make_and_put_table(f);
+            put_functions(f);
+            // %%
+            ECHO(code_section_code_buffer);
+        } break;
+        case SWITCH_TABLE: {
+            put_header(f, alphabet_size, TOKEN_OFFSET);
+            ECHO(definition_section_code_buffer);
+            // %%
+            make_and_put_switch(f);
+            // %%
+            ECHO(code_section_code_buffer);
+        } break;
+    }
+}
+
 void deinit_jeger(void) {
     for (int i = 0; i < n_states; i++) {
         free(state_names[i]);
@@ -261,28 +290,4 @@ void deinit_jeger(void) {
 
     n_rules  = 0;
     n_states = 0;
-}
-
-void generate(const char * filename) {
-    FILE * f = fopen(filename, "w");
-
-    switch (table_type) {
-        case STATIC_TABLE: {
-            put_header(f, alphabet_size, TOKEN_OFFSET);
-            ECHO(definition_section_code_buffer);
-
-            make_and_put_table(f);
-
-            put_functions(f);
-            ECHO(code_section_code_buffer);
-        } break;
-        case SWITCH_TABLE: {
-            put_header(f, alphabet_size, TOKEN_OFFSET);
-            ECHO(definition_section_code_buffer);
-
-            make_and_put_switch(f);
-
-            ECHO(code_section_code_buffer);
-        } break;
-    }
 }
